@@ -1,0 +1,60 @@
+table {
+	display: table;
+	border-collapse: separate;
+	border-top-color: gray;
+	border-right-color: gray;
+	border-bottom-color: gray;
+	border-left-color: gray;
+	width: 100%;
+}
+
+thead {
+	display: table-header-group;
+	vertical-align: middle;
+	border-top-color: inherit;
+	border-right-color: inherit;
+	border-bottom-color: inherit;
+	border-left-color: inherit;
+}
+
+tr {
+	display: table-row;
+	vertical-align: inherit;
+	border-top-color: inherit;
+	border-right-color: inherit;
+	border-bottom-color: inherit;
+	border-left-color: inherit;
+	font-size: 12px;
+}
+
+td, th {
+	border-bottom: 1px solid #dfe6ec;
+}
+
+th {
+	background-color: #eef1f6;
+	text-align: center;
+}
+
+th .ivu-table-cell{
+	padding: 10px 0px;
+}
+
+.ivu-table td{
+	font-size: 11px;
+}
+
+.input-prepend-width-80 .el-input-group__prepend{
+	width: 80px;
+}
+
+.ivu-table .el-input__inner{
+	font-size: 11px;
+	border-radius: 3px;
+	padding: 1px 2px;
+}
+.el-select-dropdown__item{
+	font-size: 11px;
+	height: 24px;
+	padding: 2px 3px;
+}

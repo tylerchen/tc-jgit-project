@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<meta name="author" content="QDP-DESIGNER-TYLERCHEN" />
+<title>QDP-DESIGNER-TYLERCHEN</title>
+<link type=text/css rel=stylesheet href="elementui.css">
+<link type=text/css rel=stylesheet href="elementui-ionicons.css">
+<link type=text/css rel=stylesheet href="custom.css">
+<script type="text/javascript" src="vue.js"></script>
+<script type="text/javascript" src="vue-resource.min.js"></script>
+<script type="text/javascript" src="elementui.js"></script>
+</head>
+<body>
+	<div id="app">
+		<component is="Menu-config" @on-post="onPost" ref="menuConfig"></component>
+		<el-row type="flex" justify="end" align="top"> <el-col :span="4"> <component v-if="projectTree"
+			:is="projectTree" @on-post="onPost" ref="projectTree"></component> </el-col> <el-col :span="20"> <component
+			v-if="currentComp" :is="currentComp" @on-post="onPost" ref="currentComp"></component> <component v-if="modalComp"
+			:is="modalComp" @on-post="onPost" ref="modalComp"></component> </el-col> </el-row>
+	</div>
+</body>
+<script type="text/plain" id="MenuConfig">
+<el-menu theme="dark" mode="horizontal" @select="select">
+	<el-menu-item index="1">Home</el-menu-item>
+	<el-submenu index="2">
+		<template slot="title">系统设置</template>
+		<el-menu-item index="Project-config" >项目根路径</el-menu-item>
+		<el-menu-item index="Database-config">数据库连接</el-menu-item>
+	</el-submenu>
+	<el-menu-item index="4">保存数据</el-menu-item>
+	<el-menu-item index="5">生成代码</el-menu-item>
+</el-menu>
+</script>
+<script type="text/plain" id="ProjectConfig">
+<el-dialog title="项目根路径" :visible.sync="showDialog" @close="closeDialog">
+	<div>
+		<el-input v-model="projectPath">
+			<span slot="prepend">项目根路径：</span>
+	    </el-input>
+	    <el-button type="primary" @click="goToCurd">加载配置</el-button>
+		<el-button type="primary" @click="reset">清空配置</el-button>
+	</div>
+	<div>
+		<el-input v-model="artifactId">
+			<span slot="prepend">工程：</span>
+	    </el-input>
+	</div>
+	<div>
+		<el-input v-model="groupId">
+			<span slot="prepend">包名：</span>
+	    </el-input>
+	</div>
+	<div>
+		<el-input v-model="version">
+			<span slot="prepend">版本：</span>
+	    </el-input>
+	</div>
+	<div>
+		代码模板版本：<el-select v-model="templateVersion">
+		<el-option value="1.0.0" label="1.0.0-vue2-elementui1.3.5"></el-option>
+		<el-option value="2.0.0" label="2.0.0-vue2-elementui2.3.5"></el-option>
+		<el-option value="3.0.0" label="3.0.0-vue2-elementui2.3.5"></el-option>
+		</el-select>
+	</div>
+</el-dialog>
+</script>
+<script type="text/plain" id="DatabaseConfig">
+<el-dialog title="数据库连接" :visible.sync="showDialog" @close="closeDialog">
+	<div class="input-prepend-width-80">
+		<el-input v-model="jdbcUrl">
+			<span slot="prepend">JdbcUrl：</span>
+	    </el-input>
+		<el-input v-model="userName">
+			<span slot="prepend">UserName：</span>
+	    </el-input>
+		<el-input v-model="password">
+			<span slot="prepend">Password：</span>
+	    </el-input>
+	    <el-button type="primary" @click="connectDatabase">确定</el-button>
+	</div>
+	<div style="height: 100px; overflow: auto;">
+		<table>
+			<thead>
+				<tr><th>name</th><th>catalog</th><th>type</th><th>remarks</th><th>operation</th></tr>
+			</thead>
+			<tbody>
+				<tr v-for="(table, key) in $root.tables" :key="key"><td>{{table.name}}</td><td>{{table.catalog}}</td><td>{{table.type}}</td><td>{{table.remarks}}</td><td><el-button size="mini" type="text" @click="removeTable(table.name)">delete</el-button></td></tr>
+			</tbody>
+		</table>
+	</div>
+</el-dialog>
+</script>
+<script type="text/plain" id="ProjectTree">
+<div>
+	<el-row type="flex" justify="end" align="top" style="padding-right: 10px;">
+		<el-button size="large" type="text" title="添加模块"       @click="addModule()"><i class="el-icon-ion-cube" style="font-size: 18px;"></i></el-button>
+		<el-button size="large" type="text" title="添加功能"       @click="addFunction()"><i class="el-icon-ion-social-facebook" style="font-size: 18px;"></i></el-button>
+		<el-button size="large" type="text" title="批量添加功能"    @click="showAddMultiFunctionDialog=true"><i class="el-icon-ion-social-foursquare" style="font-size: 18px;"></i><i class="el-icon-ion-social-foursquare" style="font-size: 18px;"></i></el-button>
+		<el-button size="large" type="text" title="添加页面"       @click="addPage()"><i class="el-icon-ion-social-chrome" style="font-size: 18px;"></i></el-button>
+		<el-button size="large" type="text" title="编辑"          @click="editNode()"><i class="el-icon-ion-edit" style="font-size: 18px;"></i></el-button>
+		<el-button size="large" type="text" title="删除"          @click="removeNode()"><i class="el-icon-ion-trash-a" style="font-size: 18px;"></i></el-button>
+	</el-row>
+	<el-row type="flex" justify="center" align="top">
+		<el-tree :highlight-current="true" :show-checkbox="false" node-key="id" :data="data" :props="props"
+			:expand-on-click-node="false" :render-content="renderContent"
+			@node-click="nodeClick" style="width:100%">
+		</el-tree>
+	</el-row>
+	<el-dialog title="添加/修改页面" :visible.sync="showPageDialog" @close="closePageDialog">
+		<el-input v-model="currentForm.name" placeholder="名称：addUser"><span slot="prepend">名称：</span></el-input>
+		<el-input v-model="currentForm.fileName" placeholder="文件名：addUser"><span slot="prepend">文件名：</span></el-input>
+	</el-dialog>
+	<el-dialog title="添加/修改功能" :visible.sync="showFunctionDialog" @close="closeFunctionDialog">
+		<el-input v-model="currentForm.name" placeholder="中文名称：用户"><span slot="prepend">名称：</span></el-input>
+		<el-input v-model="currentForm.packageName" placeholder="包名称：user"><span slot="prepend">包名：</span></el-input>
+		绑定Table：<el-select v-model="tableName" :clearable="true" :filterable="true" @change="selectTable"><el-option v-for="(val, k) in $root.tables" :value="k" :key="val">{{k}}</el-option></el-select>
+	</el-dialog>
+	<el-dialog title="添加/修改模块" :visible.sync="showModuleDialog" @close="closeModuleDialog">
+		<el-input v-model="currentForm.name" placeholder="中文名称：核心模块"><span slot="prepend">名称：</span></el-input>
+		<el-input v-model="currentForm.packageName" placeholder="包名称：core"><span slot="prepend">包名：</span></el-input>
+	</el-dialog>
+	<el-dialog title="批量添加功能" :visible.sync="showAddMultiFunctionDialog" @close="closeAddMultiFunctionDialog">
+		<el-checkbox-group v-model="checkedTables">
+			<el-checkbox v-for="(table, key) in $root.getUnuseTable()" :label="key" :key="key">{{table.name}}</el-checkbox>
+		</el-checkbox-group>
+	</el-dialog>
+</div>
+</script>
+<script type="text/plain" id="PageConfig">
+<div v-if="module && func && page && module.type && func.type && page.type" class="el-tabs--border-card">
+	<el-row>
+		<table><tr>
+			<td>包名</td><td>{{groupId}}.{{module.packageName}}</td>
+			<td>名称</td><td>{{module.name}}/{{func.name}}</td>
+			<td>表单路径</td><td>{{projectPath}}/src/main/java/{{groupId.replace('.','/')}}/{{module.packageName.replace('.','/')}}/{{func.packageName.replace('.','/')}}</td>
+			<td>绑定Table</td><td v-if="page.name=='index'&&func.tableName">{{page.tableName}}</td><td v-else><el-select v-model="tableName" :allow-create="true" :clearable="true" :filterable="true" @change="bindingTable" size="mini"><el-option v-for="(val, k) in $root.tables" :value="k" :key="val">{{k}}</el-option></el-select></td>
+		</tr></table>
+	</el-row>
+	<el-row>
+		<table><tr>
+			<td>表单类型</td><td><el-select v-model="formType" :filterable="true" @change="selectPageFormType" size="mini"><el-option v-for="value in ['grid', 'tree', 'selectOneGrid', 'selectOneTree', 'selectMultiGrid', 'selectMultiTree', 'form', 'domainOnly', 'noShow']" :value="value" :key="value">{{value}}</el-option></el-select></td>
+			<td v-if="formType=='form'"><el-button size="mini" @click="page.showJavaCode=true">添加代码</el-button></td>
+			<td v-if="formType=='form'">
+				<el-dialog title="代码" :visible.sync="page.showJavaCode">
+					<el-input v-model="page.javaCode" style="width: 100%;" type="textarea" :rows="10" placeholder="Only for form type"></el-input>
+				</el-dialog>
+			</td>
+		</tr></table>
+	</el-row>
+	<el-row>
+		<table><tr>
+			<td>表单操作</td><td><el-tag v-for="(value, key) in (page.actions||{})" :key="value" :closable="true" type="primary" @close="$delete(page.actions, key)"  :title="'事件名称:'+value.eventName+',操作类型:'+value.actionType+',快捷键:Ctrl+'+value.shortCut"><el-button size="mini" type="text" @click="actionName=value.actionName,eventName=value.eventName,actionType=value.actionType,actionIcon=value.actionIcon,shortCut=value.shortCut">{{value.actionName}}<i :class="value.actionIcon"></i></el-button></el-tag></td>
+		</tr></table>
+	</el-row>
+	<el-row>
+		<table>
+			<tr>
+				<td>操作名称</td><td><el-input v-model="actionName" style="width: 100px;" size="mini"></el-input></td>
+				<td>事件名称</td><td><el-input v-model="eventName" style="width: 100px;" size="mini"></el-input></td>
+				<td>操作类型</td><td><el-select v-model="actionType" :filterable="true" size="mini" style="width: 100px;"><el-option v-for="value in ['modal', 'link', 'delete', 'back', 'reload', 'add', 'edit', 'delete', 'info']" :value="value" :key="value">{{value}}</el-option></el-select></td>
+				<td>操作图标</td><td><el-select v-model="actionIcon" :filterable="true" size="mini" style="width: 200px;"><el-option v-for="value in icons" :value="value" :key="value"><i :class="value" style="width: 24px"></i>{{value}}</el-option></el-select></td>
+				<td>快捷键</td><td><el-input v-model="shortCut" style="width: 100px;" size="mini"><span slot="prepend">Ctrl+</span></el-input></td>
+				<td><el-button size="mini" @click="$set(page.actions, eventName, {actionName:actionName, eventName:eventName, actionType:actionType, actionIcon:actionIcon, shortCut:shortCut})">添加操作</el-button><el-button size="mini" @click="eventName='',actionType='',actionIcon='',shortCut=''">清空</el-button></td>
+			</tr>
+		</table>
+	</el-row>
+	<el-row class="ivu-table ivu-table-border ivu-table-header">
+		<table style="width: 100%;" cellspacing="0" cellpadding="0" border="0">
+			<thead>
+				<tr>
+					<th width="80px"><div class="ivu-table-cell"><span>标签</span></div></th>
+					<th width="120px"><div class="ivu-table-cell"><span>字段</span></div></th>
+					<th><div class="ivu-table-cell"><span>类型DB</span></div></th>
+					<th><div class="ivu-table-cell"><span>类型JA</span></div></th>
+					<th width="60px"><div class="ivu-table-cell"><span>长度</span></div></th>
+					<th width="40px"><div class="ivu-table-cell"><span>精度</span></div></th>
+					<th width="60px"><div class="ivu-table-cell"><span>默认值</span></div></th>
+					<th><div class="ivu-table-cell"><span>为空</span></div></th>
+					<th><div class="ivu-table-cell"><span>主键</span></div></th>
+					<th><div class="ivu-table-cell"><span>索引</span></div></th>
+					<th><div class="ivu-table-cell"><span>唯一</span></div></th>
+					<th><div class="ivu-table-cell"><span>自增长</span></div></th>
+					<th><div class="ivu-table-cell"><span>非表列</span></div></th>
+					<th width="40px"><div class="ivu-table-cell"><span>序号</span></div></th>
+					<th width="60px"><div class="ivu-table-cell"><span>描述</span></div></th>
+					<th><div class="ivu-table-cell"><span>控件</span></div></th>
+					<th><div class="ivu-table-cell"><span>配置</span></div></th>
+					<th><div class="ivu-table-cell"><span>操作</span></div></th>
+				</tr>
+			</thead>
+			<tbody class="ivu-table-tbody">
+				<tr class="ivu-table-row" v-for="(fieldModel, index) in page.fields" :key="index">
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.label" size="mini"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.field" size="mini" @keyup.native.stop="fieldModel.field=fieldModel.field.toUpperCase()"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-select v-model="fieldModel.dbType" size="mini" :filterable="true"><el-option v-for="value in dbTypes" :value="value" :key="value">{{value}}</el-option></el-select></div></td>
+					<td><div class="ivu-table-cell"><el-select v-model="fieldModel.javaType" size="mini" :filterable="true"><el-option v-for="value in javaTypes" :value="value" :key="value">{{value}}</el-option></el-select></div></td>
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.length" size="mini"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.scale" size="mini"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.defValue" size="mini"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-checkbox v-model="fieldModel.isNull"></el-checkbox></div></td>
+					<td><div class="ivu-table-cell"><el-checkbox v-model="fieldModel.isPk"></el-checkbox></div></td>
+					<td><div class="ivu-table-cell"><el-checkbox v-model="fieldModel.isIndex"></el-checkbox></div></td>
+					<td><div class="ivu-table-cell"><el-checkbox v-model="fieldModel.isUnique""></el-checkbox></div></td>
+					<td><div class="ivu-table-cell"><el-checkbox v-model="fieldModel.isAutoIncrease"></el-checkbox></div></td>
+					<td><div class="ivu-table-cell"><el-checkbox v-model="fieldModel.isNotTableColumn"></el-checkbox></div></td>
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.seqNo" size="mini"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-input v-model="fieldModel.description" size="mini"></el-input></div></td>
+					<td><div class="ivu-table-cell"><el-select style="width:100px;" placeholder="" v-model="fieldModel.type['all']"     size="mini" :filterable="true" @change="fieldModel.type.search=fieldModel.type.add=fieldModel.type.edit=fieldModel.type.grid=fieldModel.type.info=fieldModel.type.all"><el-option v-for="val in formTypes" :value="val" :key="val">{{val}}</el-option></el-select></div></td>
+					<td><div class="ivu-table-cell"><el-button size="mini" type="primary" @click="fieldModel.crudDialogShow=true">配置</el-button>
+						<el-dialog title="配置" :visible.sync="fieldModel.crudDialogShow"  @close="closeCrudDialog(fieldModel.field)">
+							<el-tabs type="border-card">
+								<el-tab-pane label="CRUD">
+									添加：<el-checkbox v-model="fieldModel.addable"></el-checkbox><br/>
+									修改：<el-checkbox v-model="fieldModel.editable"></el-checkbox><br/>
+									列表：<el-checkbox v-model="fieldModel.listable"></el-checkbox><br/>
+									详情：<el-checkbox v-model="fieldModel.infoable"></el-checkbox><br/>
+									搜索：<el-checkbox v-model="fieldModel.searchable"></el-checkbox><br/>
+									排序：<el-checkbox v-model="fieldModel.sortable"></el-checkbox><br/>
+								</el-tab-pane>
+								<el-tab-pane label="控件">
+									<table>
+										<tr><th>搜索</th><th>添加</th><th>修改</th><th>列表</th><th>详情</th></tr>
+										<tr>
+											<td><el-select style="width:100px;" placeholder="" v-model="fieldModel.type['search']"     size="small" :filterable="true"><el-option v-for="val in formTypes" :value="val" :key="val">{{val}}</el-option></el-select></td>
+											<td><el-select style="width:100px;" placeholder="" v-model="fieldModel.type['add']"        size="small" :filterable="true"><el-option v-for="val in formTypes" :value="val" :key="val">{{val}}</el-option></el-select></td>
+											<td><el-select style="width:100px;" placeholder="" v-model="fieldModel.type['edit']"       size="small" :filterable="true"><el-option v-for="val in formTypes" :value="val" :key="val">{{val}}</el-option></el-select></td>
+											<td><el-select style="width:100px;" placeholder="" v-model="fieldModel.type['grid']"       size="small" :filterable="true"><el-option v-for="val in formTypes" :value="val" :key="val">{{val}}</el-option></el-select></td>
+											<td><el-select style="width:100px;" placeholder="" v-model="fieldModel.type['info']"       size="small" :filterable="true"><el-option v-for="val in formTypes" :value="val" :key="val">{{val}}</el-option></el-select></td>
+										</tr>
+									</table>
+								</el-tab-pane>
+								<el-tab-pane label="验证">
+									<table>
+										<tr><td>字段类型</td><td colspan="4"><el-select style="width:100px;" placeholder="" v-model="fieldModel.rule.type" size="small"><el-option v-for="val in ['string','number','boolean','method','regexp','integer','float','array','object','enum','date','url','hex','email']" :value="val" :key="val">{{val}}</el-option></el-select></td></tr>
+										<tr><td>是否必须</td><td><el-checkbox v-model="fieldModel.rule.required"></el-checkbox></td><td>提示消息</td><td colspan="2"><el-input v-model="fieldModel.rule.requiredMsg" size="small"></el-input></td></tr>
+										<tr><td>正则表达式</td><td><el-input v-model="fieldModel.rule.regex" size="small"></el-input></td><td>提示消息</td><td colspan="2"><el-input  v-model="fieldModel.rule.regexMsg" size="small"></el-input></td></tr>
+										<tr><td>范围</td><td>Min<el-input-number v-model="fieldModel.rule.rangeMin" size="small"></el-input-number></td><td>Max<el-input-number v-model="fieldModel.rule.rangeMax" size="small"></el-input-number></td><td>提示消息</td><td><el-input v-model="fieldModel.rule.rangeMsg" size="small"></el-input></td></tr>
+										<tr><td>长度</td><td><el-input-number v-model="fieldModel.rule.length" size="small"></el-input-number></td><td>提示消息</td><td colspan="2"><el-input v-model="fieldModel.rule.lengthMsg" size="small"></el-input></td></tr>
+										<tr><td>枚举</td><td><el-input placeholder="json array" v-model="fieldModel.rule.enums" size="small"></el-input></td><td>提示消息</td><td colspan="2"><el-input v-model="fieldModel.rule.enumsMsg" size="small"></el-input></td></tr>
+										<tr><td>无空白字符</td><td><el-checkbox v-model="fieldModel.rule.noBlank"></el-checkbox></td><td>提示消息</td><td colspan="2"><el-input v-model="fieldModel.rule.noBlankMsg" size="small"></el-input></td></tr>
+									</table>
+								</el-tab-pane>
+								<el-tab-pane label="引用">
+									<table>
+										<tr>
+											<td>引用表</td>
+											<td><el-select v-model="fieldModel.refTable" size="small" :filterable="true"><el-option v-for="value in $root.getUseTable()" :value="value.name" :key="value.name">{{value.name}}</el-option></el-select></td>
+											<td>引用字段</td>
+											<td><el-select v-model="fieldModel.refField" :filterable="true" size="small" v-if="fieldModel.refTable"><el-option v-for="value in $root.getUseTable()[fieldModel.refTable].columns" :value="value.name" :key="value.name">{{value.name}}</el-option></el-select></td>
+											<td>标签字段</td>
+											<td><el-select v-model="fieldModel.refLabelField" :filterable="true" size="small" v-if="fieldModel.refTable"><el-option v-for="value in $root.getUseTable()[fieldModel.refTable].columns" :value="value.name" :key="value.name">{{value.name}}</el-option></el-select></td>
+										</tr>
+										<tr>
+											<td>中间表</td>
+											<td><el-select v-model="fieldModel.midTable" size="small" :filterable="true"><el-option v-for="value in $root.getUseTable()" :value="value.name" :key="value.name">{{value.name}}</el-option></el-select></td>
+											<td>主表关联字段</td>
+											<td><el-select v-model="fieldModel.midMainField" :filterable="true" size="small" v-if="fieldModel.midTable"><el-option v-for="value in $root.getUseTable()[fieldModel.midTable].columns" :value="value.name" :key="value.name">{{value.name}}</el-option></el-select></td>
+											<td>从表关联字段</td>
+											<td><el-select v-model="fieldModel.midSecondField" :filterable="true" size="small" v-if="fieldModel.midTable"><el-option v-for="value in $root.getUseTable()[fieldModel.midTable].columns" :value="value.name" :key="value.name">{{value.name}}</el-option></el-select></td>
+										</tr>
+									</table>
+								</el-tab-pane>
+								<el-tab-pane label="其他">
+									宽度：<el-input v-model="fieldModel.width" size="mini" style="width: 70%;"></el-input><br/>
+									换行：<el-checkbox v-model="fieldModel.wordbreak"></el-checkbox><br/>
+									URL：<el-checkbox v-model="fieldModel.dataUrl"></el-checkbox><br/>
+									DATA：<el-input v-model="fieldModel.jsonData" size="mini" style="width: 70%;" type="textarea" :rows="4" placeholder="JSON MAP: {'Y':'是'}"></el-input><br/>
+									可选DATA：<el-select v-model="fieldModel.jsonDataSelect" size="small" @change="selectJsonData(fieldModel)"><el-option value="YN" label="是否"></el-option><el-option value="ED" label="可用停用"></el-option><el-option value="ST" label="状态"></el-option><el-option value="FMN" label="性别"></el-option></el-select><br/>
+								</el-tab-pane>
+								<el-tab-pane label="扩展">
+									DATA：<el-input v-model="fieldModel.exJsonData" size="mini" style="width: 70%;" type="textarea" :rows="4" placeholder="Ex JSON MAP: {'Y':'是'}"></el-input><br/>
+								</el-tab-pane>
+							</el-tabs>
+						</el-dialog>
+						</div>
+					</td>
+					<td><div class="ivu-table-cell"><el-button type="primary" v-show="fieldModel.showAddBtn" @click="add()" size="small" style="margin-left: 10px;">添加</el-button><el-button type="primary" v-show="!fieldModel.showAddBtn" @click="remove(index)" size="small">删除</el-button></div></td>
+				</tr>
+			</tbody>
+		</table>
+	</el-row>
+</div>
+</script>
+<script type="text/javascript">
+	//ellipsis
+	function map(obj, func) {
+		var arr = [];
+		if (obj == null) {
+			return arr;
+		}
+		if (Object.prototype.toString.call(obj) === '[object Array]') {
+			for (var i = 0; i < obj.length; i++) {
+				arr.push(func(obj[i], i, i));
+			}
+		} else if (typeof (obj) === 'object') {
+			var i = 0;
+			for ( var prop in obj) {
+				arr.push(func(obj[prop], prop, i));
+				i = i + 1;
+			}
+		} else if (typeof (obj) == "string") {
+			for (var i = 0; i < obj.length; i++) {
+				arr.push(func(obj.charAt(i), i, i));
+			}
+		} else if (typeof (obj) == "number") {
+			for (var i = 1; i < obj; i++) {
+				arr.push(func(i, i, i));
+			}
+		}
+		return arr;
+	}
+	function idText(id) {
+		return document.getElementById(id).innerText;
+	}
+	function rid() {
+		return (Math.random() + '').substring(2);
+	}
+	function javaField(str) {
+		str = str.toLowerCase();
+		var index = -1;
+		while ((index = str.indexOf('_')) == 0) {
+			str = str.substring(1);
+		}
+		while ((index = str.indexOf('_')) == str.length - 1) {
+			str = str.substring(0, str.length - 1);
+		}
+		while ((index = str.indexOf('_')) > -1) {
+			str = str.substring(0, index) + str.charAt(index + 1).toUpperCase() + str.substring(index + 2);
+		}
+		return str;
+	}
+	function getItem(key, defaultValue) {
+		var value = localStorage.getItem(key);
+		if (value == null) {
+			return defaultValue || value;
+		}
+		if (value.charAt(0) == '{' || value.charAt(0) == '[') {//'}',']'
+			return JSON.parse(value);
+		}
+		return typeof (defaultValue) == typeof (value) ? (value || defaultValue) : defaultValue;
+	}
+	function setItem(key, value) {
+		if (value == null) {
+			localStorage.removeItem(key);
+		} else {
+			localStorage.setItem(key, value == null ? '' : (typeof (value) == 'string' ? value : JSON.stringify(value)));
+		}
+	}
+	var MenuConfig = {
+		name : 'MenuConfig', template : idText('MenuConfig'), data : function() {
+			return {};
+		}, methods : {
+			select : function(key, pathArr) {
+				if (pathArr && pathArr[0] && pathArr[0] == '1') {
+					this.$alert("Welcome to QDP Designer");
+					return;
+				}
+				if (pathArr && pathArr[0] && pathArr[0] == '5') {
+					this.onPost(function(comp) {
+						var root = this, crud = root.$refs.currentComp;
+						root.$http.post('/post', {
+							type : 'gen-code', data : {
+								projectConfig : root.projectConfig
+							}
+						}).then(function(data) {
+							var header = data.body.header;
+							var body = data.body.body;
+							if (header.status == 'ok') {
+								root.$msgbox({
+									title : '生成代码成功', message : root.$createElement('el-input', {
+										props : {
+											type : 'textarea', value : body, rows : 8
+										}
+									})
+								});
+							} else {
+								root.$alert("生成代码失败：" + body);
+							}
+						}, function(response) {
+							root.$notify({
+								title : '错误', type : 'error', message : response.url + '\n<br/>' + qdpToString(response), duration : 0
+							});
+						});
+					});
+					return;
+				}
+				if (pathArr && pathArr[0] && pathArr[0] == '4') {
+					this.onPost(function(comp) {
+						var root = this;
+						root.cleanData();
+						root.$http.post('/post', {
+							type : 'save-data', data : {
+								projectConfig : root.projectConfig, data : root.data, tables : root.tables
+							}
+						}).then(function(data) {
+							var header = data.body.header;
+							var body = data.body.body;
+							var tables = body.data.tables, projectConfig = body.data.projectConfig, data = body.data.data;
+							if (header.status == 'ok') {
+								if (tables) {
+									this.tables = tables, this.localTables();
+								}
+								if (projectConfig) {
+									this.projectConfig = projectConfig, this.localProjectConfig();
+								}
+								if (data) {
+									this.data = data;
+								}
+								root.$alert("数据保存成功");
+							} else {
+								root.$alert("数据保存失败：" + body);
+							}
+						}, function(response) {
+							root.$notify({
+								title : '错误', type : 'error', message : response.url + '\n<br/>' + qdpToString(response), duration : 0
+							});
+						});
+					});
+					return;
+				}
+				var path = key.indexOf('-') < 0 ? '' : key;
+				this.onPost(function(comp) {
+					this.modalComp = path;
+				});
+			}, onPost : function(func) {
+				this.$emit('on-post', func, this);
+			}
+		}
+	};
+	var ProjectConfig = {
+		name : 'ProjectConfig', template : idText('ProjectConfig'), computed : {
+			projectPath : {
+				get : function() {
+					return this.$root.projectConfig.projectPath;
+				}, set : function(val) {
+					this.$root.projectConfig.projectPath = val;
+				}
+			}, groupId : {
+				get : function() {
+					return this.$root.projectConfig.groupId;
+				}, set : function(val) {
+					this.$root.projectConfig.groupId = val;
+				}
+			}, artifactId : {
+				get : function() {
+					return this.$root.projectConfig.artifactId;
+				}, set : function(val) {
+					this.$root.projectConfig.artifactId = val;
+				}
+			}, version : {
+				get : function() {
+					return this.$root.projectConfig.version;
+				}, set : function(val) {
+					this.$root.projectConfig.version = val;
+				}
+			}, templateVersion : {
+				get : function() {
+					return this.$root.projectConfig.templateVersion;
+				}, set : function(val) {
+					this.$root.projectConfig.templateVersion = val;
+				}
+			}, projectConfig : function() {
+				return this.$root.projectConfig;
+			}
+		}, data : function() {
+			return {
+				showDialog : true
+			}
+		}, methods : {
+			closeDialog : function() {
+				this.onPost(function(comp) {
+					this.modalComp = '';
+				});
+			}, reset : function() {
+
+			}, goToCurd : function() {
+				var root = this, projectConfig = root.projectConfig;
+				root.$http.post('/post', {
+					type : 'project-config', data : {
+						projectConfig : projectConfig
+					}
+				}).then(function(data) {
+					var header = data.body.header;
+					var body = data.body.body;
+					var tables = body.data.tables, projectConfig = body.data.projectConfig, data = body.data.data;
+					if (header.status == 'ok') {
+						root.$root.localProjectConfig();
+						root.$message({
+							type : 'success', message : '成功'
+						});
+						root.onPost(function(comp) {
+							this.modalComp = '';
+							if (tables) {
+								this.tables = tables, this.localTables();
+							}
+							if (projectConfig) {
+								this.projectConfig = projectConfig, this.localProjectConfig();
+							}
+							if (data) {
+								this.data = data;
+							}
+						});
+					} else {
+						root.$notify({
+							title : '错误', message : body, type : 'error'
+						});
+					}
+				}, function(response) {
+					root.$notify({
+						title : '错误', type : 'error', message : response.url + '\n<br/>' + qdpToString(response), duration : 0
+					});
+				});
+			}, onPost : function(func) {
+				this.$emit('on-post', func, this);
+			}
+		}
+	};
+	var DatabaseConfig = {
+		name : 'DatabaseConfig', template : idText('DatabaseConfig'), computed : {
+			jdbcUrl : {
+				get : function() {
+					return this.$root.projectConfig.jdbcUrl;
+				}, set : function(val) {
+					this.$root.projectConfig.jdbcUrl = val;
+				}
+			}, userName : {
+				get : function() {
+					return this.$root.projectConfig.userName;
+				}, set : function(val) {
+					this.$root.projectConfig.userName = val;
+				}
+			}, password : {
+				get : function() {
+					return this.$root.projectConfig.password;
+				}, set : function(val) {
+					this.$root.projectConfig.password = val;
+				}
+			}, projectConfig : function() {
+				return this.$root.projectConfig;
+			}
+		}, data : function() {
+			return {
+				showDialog : true
+			}
+		}, methods : {
+			closeDialog : function() {
+				this.onPost(function(comp) {
+					this.modalComp = '';
+				});
+			}, connectDatabase : function() {
+				var root = this;
+				root.$http.post('/post', {
+					type : 'database-config', data : {
+						projectConfig : this.projectConfig
+					}
+				}).then(function(data) {
+					var header = data.body.header;
+					var body = data.body.body;
+					if (header.status == 'ok') {
+						/*{ "auth_account": { "catalog": "new_qdp_0201", "name": "auth_account", "type": "TABLE", "remarks": "", "columns": [ { "name": "ID", "type": "String", "size": 40, "remarks": "主键", "isAutoIncrement": "N", "isNullable": "N", "isPrimaryKey": "Y" }}}*/
+						root.onPost(function(comp) {
+							this.modalComp = '';
+							this.tables = body, this.localTables();
+							this.localProjectConfig();
+						});
+						root.$message({
+							type : 'success', message : '成功'
+						});
+					} else {
+						root.$notify({
+							title : '错误', message : body, type : 'error'
+						});
+					}
+				}, function(response) {
+					root.$notify({
+						title : '错误', type : 'error', message : response.url + '\n<br/>' + qdpToString(response), duration : 0
+					});
+				});
+			}, removeTable : function(tableName) {
+				Vue['delete'](this.$root.tables, tableName || '-');
+			}, onPost : function(func) {
+				this.$emit('on-post', func, this);
+			}
+		}
+	};
+	var ProjectTree = {
+		name : 'ProjectTree',
+		template : idText('ProjectTree'),
+		data : function() {
+			return {
+				showPageDialog : false, showFunctionDialog : false, showModuleDialog : false, showAddMultiFunctionDialog : false, checkedTables : [],
+				currentForm : {}, currentNode : {}, currentVmNode : {}, tableName : '', props : {
+					label : 'name', children : 'children'
+				}, iconMap : Object.freeze({
+					'module' : 'cube', 'function' : 'social-facebook', 'page' : 'social-chrome', 'mapping' : 'document', 'java' : 'leaf'
+				})
+			}
+		},
+		computed : {
+			data : function() {
+				return this.$root.data;
+			}, projectPath : function() {
+				return this.$root.projectPath;
+			}
+		},
+		methods : {
+			closeModuleDialog : function() {
+				var root = this, closeable = true, cform = root.currentForm;
+				if (!cform.name || !cform.packageName) {
+					var indexOf = root.data.indexOf(cform);
+					indexOf > -1 && root.data.splice(indexOf, 1);
+					return;
+				}
+				map(root.data, function(module) {
+					if (cform == module) {
+						return;
+					}
+					if (!(cform.name == module.name || cform.packageName == module.packageName)) {
+						return;
+					}
+					cform.name = cform.name + "_" + rid(), cform.packageName = cform.packageName + "_" + rid(), closeable = false;
+				});
+				if (!closeable) {
+					root.showModuleDialog = true;
+					root.$alert("名称已经存在，请修改名称，不要带下划线“_”：" + cform.name);
+				}
+			},
+			closeFunctionDialog : function() {
+				var root = this, cform = root.currentForm;
+				if (!cform.name) {
+					map(root.data, function(module) {
+						var indexOf = module.children.indexOf(cform);
+						indexOf > -1 && module.children.splice(indexOf, 1);
+					});
+					return;
+				}
+				var funcName = root.$root.getFuncName(cform);
+				if (funcName.name.indexOf('_') > -1) {
+					root.showFunctionDialog = true, cform.name = funcName.name;
+					root.$alert("名称已经存在，请修改名称，不要带下划线“_”：" + cform.name);
+				}
+			},
+			closePageDialog : function() {
+				var root = this, cform = root.currentForm, func = root.currentNode;
+				if (!cform.name || !cform.fileName) {
+					map(root.data, function(module) {
+						map(module.children, function(func) {
+							var indexOf = func.children.indexOf(cform);
+							indexOf > -1 && func.children.splice(indexOf, 1);
+						});
+					});
+					return;
+				}
+				var pageName = root.$root.getPageName(func, cform);
+				if (pageName.name.indexOf('_') > -1) {
+					root.showPageDialog = true, cform.name = pageName.name, cform.packageName = pageName.packageName;
+					root.$alert("名称已经存在，请修改名称，不要带下划线“_”：" + cform.name);
+				}
+			},
+			renderContent : function(h, node_data_store) {
+				var root = this, node = node_data_store.node, data = node_data_store.data, store = node_data_store.start;
+				return h('span', {
+					'class' : 'el-tree-node__label'
+				}, [
+						h('i', {
+							'class' : 'el-icon-ion-' + root.iconMap[data.type],
+							'style' : 'padding-right: 10px; color: ' + (data.remove === false ? '#F7BA2A' : '#1D8CE0')
+						}), (data.type == 'function' && data.packageName ? ('(' + data.packageName + ')') : '') + data.name ]);
+			},//
+			nodeClick : function(data, node, $node) {
+				this.currentNode = data, this.currentForm = {}, this.currentVmNode = node;
+				if (data.type == 'page') {
+					this.onPost(function(comp) {
+						var root = this;
+						/*root.combineTable(), */root.currentComp = 'Page-config';
+						setTimeout(function() {
+							root.$refs.currentComp.module = node.parent.parent.data;
+							root.$refs.currentComp.func = node.parent.data;
+							root.$refs.currentComp.page = data;
+							root.$refs.currentComp.tableName = data.tableName;
+							root.$refs.currentComp.formType = data.formType;
+							if (root.$refs.currentComp.page.fields.length < 1) {
+								root.$refs.currentComp.bindingTable();
+							}
+						}, 500);
+					});
+				} else {
+					this.onPost(function(comp) {
+						this.currentComp = '';
+					});
+				}
+			},//
+			selectTable : function() {
+				var root = this, children = root.currentForm.children;
+				if (root.tableName && root.tableName != root.currentForm.tableName) {
+					map(children, function(value) {
+						if (value.type == 'page' && value.name == 'index') {
+							value.tableName = root.currentForm.tableName = root.tableName;
+							value.fields = [];
+						}
+					});
+				}
+			}, addModule : function(data) {
+				if (data) {
+					this.currentForm = data;
+				} else {
+					this.currentForm = JSON.parse(JSON.stringify(this.$root.moduleModel));
+					this.currentForm.id = rid();
+				}
+				Vue.set(this.data, this.data.length, this.currentForm);
+				this.showModuleDialog = true;
+			},//
+			addFunction : function(data) {
+				var root = this, node = this.currentNode, $root = root.$root;
+				if (data) {
+					root.currentForm = data;
+					root.tableName = data.tableName || '';
+				} else {
+					if (node && node.type == 'module') {
+						root.currentForm = JSON.parse(JSON.stringify($root.functionModel));
+						var indexPage = JSON.parse(JSON.stringify($root.pageModel));
+						indexPage.formType = 'grid', indexPage.name = 'index', indexPage.fileName = 'index';
+						root.currentForm.id = rid(), indexPage.id = rid();
+						Vue.set(root.currentForm.children, root.currentForm.children.length, indexPage);
+						Vue.set(node.children, node.children.length, root.currentForm);
+					} else {
+						root.$alert("请选择模块");
+						return;
+					}
+				}
+				root.showFunctionDialog = true;
+			},//
+			closeAddMultiFunctionDialog : function() {
+				var root = this, node = this.currentNode, $root = root.$root, tableNames = this.checkedTables, tables = this.$root.tables;
+				if (node && node.type == 'module') {
+					map(tableNames, function(tableName) {
+						if (!tables[tableName]) {
+							return;
+						}
+						root.currentForm = JSON.parse(JSON.stringify($root.functionModel));
+						root.tableName = tableName;
+						var indexPage = JSON.parse(JSON.stringify($root.pageModel));
+						var name = tableName.toLowerCase().replace('_', '');
+						indexPage.formType = 'grid', indexPage.name = 'index', indexPage.fileName = 'index';
+						root.currentForm.id = rid(), indexPage.id = rid(), indexPage.tableName = tableName;
+						root.currentForm.name = name, root.currentForm.tableName = tableName;
+						var funcName = root.$root.getFuncName(root.currentForm);
+						root.currentForm.name = funcName.name;
+						Vue.set(root.currentForm.children, root.currentForm.children.length, indexPage);
+						Vue.set(node.children, node.children.length, root.currentForm);
+						var table = tables[root.currentForm.tableName];
+						root.$root.setBindingTable(indexPage, table);
+					});
+					this.checkedTables = [];
+				} else {
+					root.$alert("请选择模块");
+					return;
+				}
+			}, //
+			addPage : function(data) {
+				if (data) {
+					this.currentForm = data;
+				} else {
+					if (this.currentNode && this.currentNode.type == 'function') {
+						this.currentForm = JSON.parse(JSON.stringify(this.$root.pageModel));
+						this.currentForm.id = rid();
+						Vue.set(this.currentNode.children, this.currentNode.children.length, this.currentForm);
+					} else {
+						this.$alert("请选择功能");
+						return;
+					}
+				}
+				this.showPageDialog = true;
+			},//
+			editNode : function() {
+				if (this.currentNode && this.currentNode.remove !== false) {
+					var type = this.currentNode.type;
+					if (type == 'module') {
+						this.currentForm = this.currentNode;
+						this.showModuleDialog = true;
+					} else if (type == 'function') {
+						this.currentForm = this.currentNode;
+						this.tableName = this.currentForm.tableName || '';
+						this.showFunctionDialog = true;
+					} else if (type == 'page') {
+						this.currentForm = this.currentNode;
+						this.showPageDialog = true;
+					} else {
+						this.$alert("不可编辑");
+					}
+				} else {
+					this.$alert("不可编辑");
+				}
+			},//
+			removeNode : function() {
+				var root = this;
+				if (root.currentNode && root.currentNode.remove !== false) {
+					var type = root.currentNode.type, data = root.data, callback;
+					if (type == 'module') {
+						var indexOf = data.indexOf(root.currentNode);
+						indexOf > -1 && (callback = function() {
+							data.splice(indexOf, 1);
+						});
+					} else if (type == 'function') {
+						map(data, function(module) {
+							var indexOf = module.children.indexOf(root.currentNode);
+							indexOf > -1 && (callback = function() {
+								module.children.splice(indexOf, 1);
+							});
+						});
+					} else if (type == 'page') {
+						map(data, function(module) {
+							map(module.children, function(func) {
+								var indexOf = func.children.indexOf(root.currentNode);
+								indexOf > -1 && (callback = function() {
+									func.children.splice(indexOf, 1);
+								});
+							});
+						});
+					} else {
+						root.$alert("没找到");
+					}
+					callback && root.$confirm('删除选中?', '提示', {
+						confirmButtonText : '确定', cancelButtonText : '取消', type : 'warning'
+					}).then(function() {
+						callback.call(root);
+					})['catch'](function() {
+					});
+				} else {
+					root.$alert("不可删除");
+				}
+			},//
+			onPost : function(func) {
+				this.$emit('on-post', func, this);
+			}
+		}
+	};
+	var PageConfig = {
+		name : 'PageConfig',
+		template : idText('PageConfig'),
+		computed : {
+			projectPath : function() {
+				return this.$root.projectPath;
+			}, groupId : {
+				get : function() {
+					return this.$root.projectConfig.groupId || 'nogroupid';
+				}, set : function(val) {
+					this.$root.projectConfig.groupId = val;
+				}
+			}, icons : function() {
+				if (elIcons.length > 0) {
+					return elIcons;
+				}
+				map(defaultIconNames, function(value) {
+					elIcons.push('el-icon-' + value);
+				});
+				map(iconNames, function(value) {
+					elIcons.push('el-icon-ion-' + value);
+				});
+				return elIcons;
+			}
+		},
+		data : function() {
+			return {
+				module : {},
+				func : {},
+				page : {},//
+				tableName : '',
+				actionName : '',
+				eventName : '',
+				actionType : '',
+				actionIcon : '',
+				shortCut : '',//
+				formType : '',
+				formTypes : 'text|textarea|password|radio|checkbox|switch|select|date|time|cascader|number|rate|file|modal|label|icon'.split('|'),
+				dbTypes : 'VARCHAR|CHAR|DATETIME|TIMESTAMP|INT|BOOLEAN|SMALLINT|DOUBLE|FLOAT|DECIMAL|NUMERIC|BLOB|MEDIUMBLOB|LONGBLOB|TEXT|MEDIUMTEXT|LONGTEXT|CLOB'
+						.split('|'), javaTypes : 'String|Integer|Long|Date|Double|BigDecimal|Boolean|Float|Short|Byte|byte[]'.split('|')
+			}
+		}, methods : {
+			closeCrudDialog : function(fieldName) {
+				var root = this, page = root.page, fields = page.fields;
+				map(fields, function(value) {
+					var refTable = value.refTable, refField = value.refField, refLabelField = value.refLabelField;
+					if (value.field == fieldName && refTable && refField && refLabelField) {
+						var hasFound = false, javaFieldName = javaField(fieldName);
+						map(root.func.children, function(item) {
+							if (item.type == 'page' && (item.fileName == javaFieldName || item.name == javaFieldName)) {
+								hasFound = true;
+							}
+						});
+						if (!hasFound) {
+							var modalPage = JSON.parse(JSON.stringify(root.$root.pageModel));
+							modalPage.name = javaFieldName, modalPage.fileName = javaFieldName, modalPage.formType = 'selectMultiGrid';
+							modalPage.id = rid(), modalPage.name = javaField(fieldName), modalPage.tableName = refTable;
+							Vue.set(root.func.children, root.func.children.length, modalPage);
+							root.$root.setBindingTable(modalPage, root.$root.getUseTable()[refTable]);
+						}
+					}
+				});
+			}, add : function(item) {
+				var fields = this.page.fields;
+				if (fields.length > 0) {
+					var field = fields[fields.length - 1];
+					field.showAddBtn = false;
+				}
+				var addItem = item || JSON.parse(JSON.stringify(this.$root.fieldModel));
+				Vue.set(fields, fields.length, addItem);
+			}, remove : function(index) {
+				var fields = this.page.fields;
+				Vue['delete'](fields, index);
+			}, clear : function() {
+				var fields = this.page.fields;
+				Vue.set(this.page, 'fields', []);
+			}, bindingTable : function() {
+				var root = this, table = root.$root.tables[root.tableName || '-'];
+				root.page.tableName = root.tableName;
+				if (table && (root.tableName != root.page.tableName || root.page.fields.length < 1)) {
+					root.page.fields = [];
+					root.$root.setBindingTable(root.page, table);
+				} else {
+					root.$root.combineTable();
+					if (root.page.type == 'page' && root.page.name == 'index' && !root.func.tableName) {
+						root.func.tableName = root.tableName;
+					}
+					root.$root.setBindingTable(root.page, null);
+				}
+			},//
+			selectJsonData : function(field) {
+				var root = this, dataMap = {
+					'YN' : '{"Y":"是","N":"否"}', 'ED' : '{"Y":"可用","N":"停用"}', 'FMN' : '{"F":"女","M":"男","N":"未知"}', 'ST' : '{"Y":"可用","N":"停用"}'
+				};
+				field.jsonData = dataMap[field.jsonDataSelect] || '';
+			},//
+			selectPageFormType : function() {
+				var root = this, actions = {}, formType = root.formType;
+				if (!formType || formType == root.page.formType) {
+					return;
+				}
+				root.page.formType = formType;
+				if (formType == 'tree') {
+					actions = {
+						back : {
+							actionName : "返回", eventName : "back", actionType : "back", shortCut : 'B', actionIcon : "el-icon-ion-arrow-left-a"
+						}, reload : {
+							actionName : "刷新", eventName : "reload", actionType : "reload", shortCut : 'R', actionIcon : "el-icon-ion-refresh"
+						}, add : {
+							actionName : "添加根节点", eventName : "add", actionType : "add", shortCut : 'A', actionIcon : "el-icon-ion-plus-round"
+						}, addChild : {
+							actionName : "添加子节点", eventName : "addChild", actionType : "edit", shortCut : 'Z', actionIcon : "el-icon-ion-plus-circled"
+						}, edit : {
+							actionName : "修改", eventName : "edit", actionType : "edit", shortCut : 'E', actionIcon : "el-icon-edit"
+						}, info : {
+							actionName : "详情", eventName : "info", actionType : "info", shortCut : 'I', actionIcon : "el-icon-ion-information"
+						}, remove : {
+							actionName : "删除", eventName : "delete", actionType : "delete", shortCut : 'D', actionIcon : "el-icon-ion-trash-b"
+						}
+					};
+					Vue.set(root.page, "actions", actions);
+				} else {
+					var modalPage = JSON.parse(JSON.stringify(root.$root.pageModel));
+					Vue.set(root.page, "actions", modalPage.actions);
+				}
+			},//
+			onPost : function(func) {
+				this.$emit('on-post', func);
+			}
+		}
+	};
+	var Root = new Vue({
+		name : 'Root',
+		el : '#app',
+		components : {
+			'Menu-config' : MenuConfig, 'Project-config' : ProjectConfig, 'Database-config' : DatabaseConfig, 'Project-tree' : ProjectTree,
+			'Page-config' : PageConfig
+		},
+		data : function() {
+			return {
+				data : [],
+				projectConfig : {
+					projectPath : getItem('projectConfig', {}).projectPath || '',
+					jdbcUrl : getItem('projectConfig', {}).jdbcUrl
+							|| 'jdbc:mysql://localhost:3306/database?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false',
+					userName : getItem('projectConfig', {}).userName || '', password : getItem('projectConfig', {}).password || '', //
+					groupId : getItem('projectConfig', {}).groupId || '', artifactId : getItem('projectConfig', {}).artifactId || '',
+					version : getItem('projectConfig', {}).version || '', templateVersion : getItem('projectConfig', {}).templateVersion || '1.0.0'
+				},
+				tables : getItem('tables', {}),//
+				pageModel : Object.freeze({
+					id : rid(), name : '', fileName : '', type : 'page', formType : '', tableName : '', showJavaCode : false, javaCode : '', fields : [],
+					actions : {
+						back : {
+							actionName : "返回", eventName : "back", actionType : "back", shortCut : 'B', actionIcon : "el-icon-ion-arrow-left-a"
+						}, reload : {
+							actionName : "刷新", eventName : "reload", actionType : "reload", shortCut : 'R', actionIcon : "el-icon-ion-refresh"
+						}, add : {
+							actionName : "添加", eventName : "add", actionType : "add", shortCut : 'A', actionIcon : "el-icon-ion-plus-round"
+						}, edit : {
+							actionName : "修改", eventName : "edit", actionType : "edit", shortCut : 'E', actionIcon : "el-icon-edit"
+						}, info : {
+							actionName : "详情", eventName : "info", actionType : "info", shortCut : 'I', actionIcon : "el-icon-ion-information"
+						}, remove : {
+							actionName : "删除", eventName : "delete", actionType : "delete", shortCut : 'D', actionIcon : "el-icon-ion-trash-b"
+						}
+					}
+				}),
+				functionModel : Object.freeze({
+					id : rid(), name : '', packageName : '', tableName : '', type : 'function', remarks : '', children : [ {
+						name : 'sqlmapping', type : 'mapping', remove : false
+					}, {
+						name : 'model', type : 'java', remove : false
+					}, {
+						name : 'application', type : 'java', remove : false
+					}, {
+						name : 'controller', type : 'java', remove : false
+					} ]
+				}),
+				moduleModel : Object.freeze({
+					id : rid(), name : '', packageName : '', type : 'module', children : []
+				}),
+				fieldModel : Object.freeze({
+					label : '',
+					field : '',
+					dbType : '',
+					javaType : '',
+					length : '',
+					scale : '',
+					defValue : '',
+					isNull : false,
+					isPk : false,
+					isIndex : false,
+					isUnique : false,
+					isAutoIncrease : false,
+					isNotTableColumn : false,
+					seqNo : '',
+					description : '',
+					addable : true,
+					editable : true,
+					listable : false,
+					infoable : true,
+					searchable : false,
+					sortable : false,//
+					width : '',
+					wordbreak : false,
+					dataUrl : '',
+					jsonData : '',//
+					jsonDataSelect : '',//
+					exJsonData : '',//
+					type : {
+						all : 'text', add : 'text', edit : 'text', grid : 'text', info : 'text', search : 'text'
+					},
+					refTable : '',
+					refField : '',
+					refLabelField : '',
+					midTable : '',
+					midMainField : '',
+					midSecondField : '',
+					rule : {
+						type : "", required : false, requiredMsg : '', regex : '', regexMsg : '', rangeMin : 0, rangeMax : 0, rangeMsg : '', length : 0,
+						lengthMsg : '', enums : '', enumsMsg : '', noBlank : false, noBlankMsg : ''
+					},
+					//
+					showAddBtn : true, crudDialogShow : false
+				}),//
+				currentComp : "", modalComp : "Project-config", projectTree : "Project-tree"
+			}
+		},
+		methods : {
+			localProjectConfig : function() {
+				setItem('projectConfig', this.projectConfig);
+			},
+			localTables : function() {
+				setItem('tables', this.tables);
+			},
+			getFuncName : function(newFunc) {
+				var root = this, rename = false;
+				map(this.data, function(module) {
+					map(module.children, function(func) {
+						if (newFunc == func || newFunc.name != func.name) {
+							return;
+						}
+						rename = true;
+					});
+				});
+				var r = rename ? ('_' + rid()) : '';
+				return {
+					name : newFunc.name + r
+				};
+			},
+			getPageName : function(func, newPage) {
+				var root = this, rename = false;
+				map(func.children, function(page) {
+					if (newPage == page || !(newPage.name == page.name || newPage.fileName == page.fileName)) {
+						return;
+					}
+					rename = true;
+				});
+				var r = rename ? ('_' + rid()) : '';
+				return {
+					name : newPage.name + r, packageName : newPage.packageName + r
+				};
+			},
+			getUnuseTable : function() {
+				var root = this, data = root.data, tables = this.tables, tableNames = [], unuseTable = {};
+				map(data, function(module) {
+					map(module.children, function(func) {
+						map(func.children, function(value) {
+							if (value.type == 'page' && value.name == 'index' && value.tableName) {
+								tableNames.push(value.tableName);
+							}
+						});
+					});
+				});
+				map(tables, function(value, key) {
+					tableNames.indexOf(key) < 0 && (unuseTable[key] = value);
+				});
+				return unuseTable;
+			},
+			getUseTable : function() {
+				var root = this, data = root.data, tables = this.tables, useTable = {};
+				map(data, function(module) {
+					map(module.children, function(func) {
+						map(func.children, function(value) {
+							if (value.type == 'page' && value.name == 'index' && value.tableName) {
+								tables[value.tableName] && (useTable[value.tableName] = tables[value.tableName]);
+							}
+						});
+					});
+				});
+				return useTable;
+			},
+			setBindingTable : function(page, table) {
+				var root = this, fields = page.fields;
+				var inField = function(fieldName) {
+					return [ 'ID', 'DESCRIPTION', 'UPDATE_TIME', 'CREATE_TIME' ].indexOf(fieldName) < 0;
+				};
+				var add = function(item) {
+					if (fields.length > 0) {
+						var field = fields[fields.length - 1];
+						field.showAddBtn = false;
+					}
+					var addItem = item || JSON.parse(JSON.stringify(root.fieldModel));
+					Vue.set(fields, fields.length, addItem);
+				};
+				if (!table) {
+					if (fields.length < 1) {
+						add(JSON.parse(JSON.stringify(root.fieldModel)));
+					}
+					return;
+				}
+				if (table.tableName && table.fields) {//这个是个Page对象
+					var refPage = JSON.parse(JSON.stringify(table));
+					map(table.fields, function(field) {
+						field.refTable = '', field.refField = '', field.refLabelField = '';
+						field.midTable = '', field.midMainField = '', field.midSecondField = '';
+						add(item);
+					});
+				} else {//这个是个table对象
+					map(table.columns, function(value, key, index) {
+						var item = JSON.parse(JSON.stringify(root.fieldModel)), isInField = inField(value.name);
+						item.label = value.remarks || value.name, item.field = value.name, item.dbType = value.sqlType;
+						item.javaType = [ 'java.sql.Date', 'java.sql.Time', 'java.sql.Timestamp' ].indexOf(value.type) > -1 ? 'Date' : value.type;
+						item.length = value.size, item.scale = value.digit, item.defValue = value.defaultValue;
+						item.isNull = value.isNullable == 'N' ? false : true, item.isPk = value.isPrimaryKey == 'N' ? false : true;
+						item.isIndex = false, item.isUnique = false, item.isAutoIncrease = value.isAutoIncrement == 'N' ? false : true;
+						item.description = value.remarks || value.name, item.isNotTableColumn = false, item.seqNo = (index + 1) * 10 + '';
+						item.addable = isInField, item.editable = isInField, item.listable = isInField, item.infoable = true;
+						item.searchable = isInField, item.sortable = isInField;
+						var type = [ 'Integer', 'Long', 'Double', 'BigDecimal', 'Float', 'Short' ].indexOf(item.javaType) > -1 ? 'number' : '';
+						if (!type) {
+							type = 'Date' == item.javaType ? 'date' : '';
+						}
+						if (!type) {
+							type = 'Boolean' == item.javaType ? 'switch' : '';
+						}
+						if (!type) {
+							type = 'text';
+						}
+						item.type.add = type, item.type.edit = type, item.type.grid = 'text', item.type.info = 'text', item.type.search = type;
+						add(item);
+					});
+				}
+			},
+			cleanData : function() {
+				var root = this, data = root.data;
+				map(data, function(module) {
+					map(module.children, function(func) {
+						map(func.children, function(item) {
+							if (item.type == 'page' && item.fields.length > 0) {
+								var i = 0, len = item.fields.length, fs = item.fields;
+								if (!('showJavaCode' in item)) {
+									Vue.set(item, 'showJavaCode', false), Vue.set(item, 'javaCode', '');
+								}
+								for (; i < len; i++) {
+									if (!fs[i].field) {
+										fs.splice(i, 1);
+										i = i - 1, len = fs.length;
+									}
+								}
+								if (fs.length > 0) {
+									fs[fs.length - 1].showAddBtn = true;
+								}
+								item.fields.sort(function(a, b) {
+									var pa = a == null ? '' : (a.seqNo || ''), ta = a == null ? '' : (a.field || '');
+									var pb = b == null ? '' : (b.seqNo || ''), tb = b == null ? '' : (b.field || '');
+									pa = parseInt(pa) || 10000, pb = parseInt(pb) || 10000;
+									return pa == pb ? (ta == tb ? 0 : (ta < tb ? -1 : 1)) : (pa < pb ? -1 : 1);
+								});
+								for (i=0; i < fs.length; i++) {
+									fs[i].seqNo = (i+1) * 10 + '';
+									console.log(fs[i].field);
+								}
+							}
+						});
+						func.children.sort(function(a, b) {
+							var pa = a == null ? '' : (a.packageName || ''), ta = a == null ? '' : (a.tableName || '');
+							var pb = b == null ? '' : (b.packageName || ''), tb = b == null ? '' : (b.tableName || '');
+							return pa == pb ? (ta == tb ? 0 : (ta < tb ? -1 : 1)) : (pa < pb ? -1 : 1);
+						});
+					});
+					module.children.sort(function(a, b) {
+						var pa = a == null ? '' : (a.packageName || '');
+						var pb = b == null ? '' : (b.packageName || '');
+						return pa == pb ? 0 : (pa < pb ? -1 : 1);
+					});
+				});
+			},
+			combineTable : function() {
+				var root = this, data = root.data, tables = this.tables;
+				map(data, function(module) {
+					map(module.children, function(func) {
+						map(func.children, function(value) {
+							if (value.type == 'page' && value.name == 'index' && value.tableName) {
+								var table = {}, columns = [];
+								if (tables[value.tableName]) {
+									table = tables[value.tableName];
+									if (table.catalog) {
+										return;//如果是从数据库加载出来的就不改变
+									}
+								} else {
+									table.name = value.tableName, Vue.set(tables, value.tableName, table);
+								}
+								map(value.fields, function(field) {
+									!field.isNotTableColumn
+											&& columns.push({
+												name : field.field, remarks : field.description || field.lable, sqlType : field.dbType,
+												type : field.javaType == 'Date' ? 'java.sql.Date' : field.javaType, size : field.length, digit : field.scale,
+												defaultValue : field.defValue, isNullable : field.isNull ? 'Y' : 'N', isPrimaryKey : field.isPk ? 'Y' : 'N',
+												isAutoIncrement : field.isAutoIncrease ? 'Y' : 'N'
+											});
+								});
+								Vue.set(table, 'columns', columns);
+							}
+						});
+					});
+				});
+			}, onPost : function(func, com) {
+				if (typeof (func) == 'function') {
+					func.call(this, com);
+				}
+			}
+		}
+	});
+	var elIcons = [];
+	// el-icon-*
+	var defaultIconNames = [ "arrow-down", "arrow-left", "arrow-right", "arrow-up", "caret-bottom", "caret-left", "caret-right", "caret-top", "check",
+			"circle-check", "circle-close", "circle-cross", "close", "upload", "d-arrow-left", "d-arrow-right", "d-caret", "date", "delete", "document",
+			"edit", "information", "loading", "menu", "message", "minus", "more", "picture", "plus", "search", "setting", "share", "star-off", "star-on",
+			"time", "warning", "delete2", "upload2", "view" ];
+	// el-icon-ion-*
+	var iconNames = [ "ionic", "arrow-up-a", "arrow-right-a", "arrow-down-a", "arrow-left-a", "arrow-up-b", "arrow-right-b", "arrow-down-b", "arrow-left-b",
+			"arrow-up-c", "arrow-right-c", "arrow-down-c", "arrow-left-c", "arrow-return-right", "arrow-return-left", "arrow-swap", "arrow-shrink",
+			"arrow-expand", "arrow-move", "arrow-resize", "chevron-up", "chevron-right", "chevron-down", "chevron-left", "navicon-round", "navicon", "drag",
+			"log-in", "log-out", "checkmark-round", "checkmark", "checkmark-circled", "close-round", "close", "close-circled", "plus-round", "plus",
+			"plus-circled", "minus-round", "minus", "minus-circled", "information", "information-circled", "help", "help-circled", "backspace-outline",
+			"backspace", "help-buoy", "asterisk", "alert", "alert-circled", "refresh", "loop", "shuffle", "home", "search", "flag", "star", "heart",
+			"heart-broken", "gear-a", "gear-b", "toggle-filled", "toggle", "settings", "wrench", "hammer", "edit", "trash-a", "trash-b", "document",
+			"document-text", "clipboard", "scissors", "funnel", "bookmark", "email", "email-unread", "folder", "filing", "archive", "reply", "reply-all",
+			"forward", "share", "paper-airplane", "link", "paperclip", "compose", "briefcase", "medkit", "at", "pound", "quote", "cloud", "upload", "more",
+			"grid", "calendar", "clock", "compass", "pinpoint", "pin", "navigate", "location", "map", "lock-combination", "locked", "unlocked", "key",
+			"arrow-graph-up-right", "arrow-graph-down-right", "arrow-graph-up-left", "arrow-graph-down-left", "stats-bars", "connection-bars", "pie-graph",
+			"chatbubble", "chatbubble-working", "chatbubbles", "chatbox", "chatbox-working", "chatboxes", "person", "person-add", "person-stalker", "woman",
+			"man", "female", "male", "transgender", "fork", "knife", "spoon", "soup-can-outline", "soup-can", "beer", "wineglass", "coffee", "icecream",
+			"pizza", "power", "mouse", "battery-full", "battery-half", "battery-low", "battery-empty", "battery-charging", "wifi", "bluetooth", "calculator",
+			"camera", "eye", "eye-disabled", "flash", "flash-off", "qr-scanner", "image", "images", "wand", "contrast", "aperture", "crop", "easel",
+			"paintbrush", "paintbucket", "monitor", "laptop", "ipad", "iphone", "ipod", "printer", "usb", "outlet", "bug", "code", "code-working",
+			"code-download", "fork-repo", "network", "pull-request", "merge", "xbox", "playstation", "steam", "closed-captioning", "videocamera",
+			"film-marker", "disc", "headphone", "music-note", "radio-waves", "speakerphone", "mic-a", "mic-b", "mic-c", "volume-high", "volume-medium",
+			"volume-low", "volume-mute", "levels", "play", "pause", "stop", "record", "skip-forward", "skip-backward", "eject", "bag", "card", "cash",
+			"pricetag", "pricetags", "thumbsup", "thumbsdown", "happy-outline", "happy", "sad-outline", "sad", "bowtie", "tshirt-outline", "tshirt", "trophy",
+			"podium", "ribbon-a", "ribbon-b", "university", "magnet", "beaker", "erlenmeyer-flask", "egg", "earth", "planet", "lightbulb", "cube", "leaf",
+			"waterdrop", "flame", "fireball", "bonfire", "umbrella", "nuclear", "no-smoking", "thermometer", "speedometer", "model-s", "plane", "jet",
+			"load-a", "load-b", "load-c", "load-d", "ios-ionic-outline", "ios-arrow-back", "ios-arrow-forward", "ios-arrow-up", "ios-arrow-right",
+			"ios-arrow-down", "ios-arrow-left", "ios-arrow-thin-up", "ios-arrow-thin-right", "ios-arrow-thin-down", "ios-arrow-thin-left", "ios-circle-filled",
+			"ios-circle-outline", "ios-checkmark-empty", "ios-checkmark-outline", "ios-checkmark", "ios-plus-empty", "ios-plus-outline", "ios-plus",
+			"ios-close-empty", "ios-close-outline", "ios-close", "ios-minus-empty", "ios-minus-outline", "ios-minus", "ios-information-empty",
+			"ios-information-outline", "ios-information", "ios-help-empty", "ios-help-outline", "ios-help", "ios-search", "ios-search-strong", "ios-star",
+			"ios-star-half", "ios-star-outline", "ios-heart", "ios-heart-outline", "ios-more", "ios-more-outline", "ios-home", "ios-home-outline", "ios-cloud",
+			"ios-cloud-outline", "ios-cloud-upload", "ios-cloud-upload-outline", "ios-cloud-download", "ios-cloud-download-outline", "ios-upload",
+			"ios-upload-outline", "ios-download", "ios-download-outline", "ios-refresh", "ios-refresh-outline", "ios-refresh-empty", "ios-reload",
+			"ios-loop-strong", "ios-loop", "ios-bookmarks", "ios-bookmarks-outline", "ios-book", "ios-book-outline", "ios-flag", "ios-flag-outline",
+			"ios-glasses", "ios-glasses-outline", "ios-browsers", "ios-browsers-outline", "ios-at", "ios-at-outline", "ios-pricetag", "ios-pricetag-outline",
+			"ios-pricetags", "ios-pricetags-outline", "ios-cart", "ios-cart-outline", "ios-chatboxes", "ios-chatboxes-outline", "ios-chatbubble",
+			"ios-chatbubble-outline", "ios-cog", "ios-cog-outline", "ios-gear", "ios-gear-outline", "ios-settings", "ios-settings-strong", "ios-toggle",
+			"ios-toggle-outline", "ios-analytics", "ios-analytics-outline", "ios-pie", "ios-pie-outline", "ios-pulse", "ios-pulse-strong", "ios-filing",
+			"ios-filing-outline", "ios-box", "ios-box-outline", "ios-compose", "ios-compose-outline", "ios-trash", "ios-trash-outline", "ios-copy",
+			"ios-copy-outline", "ios-email", "ios-email-outline", "ios-undo", "ios-undo-outline", "ios-redo", "ios-redo-outline", "ios-paperplane",
+			"ios-paperplane-outline", "ios-folder", "ios-folder-outline", "ios-paper", "ios-paper-outline", "ios-list", "ios-list-outline", "ios-world",
+			"ios-world-outline", "ios-alarm", "ios-alarm-outline", "ios-speedometer", "ios-speedometer-outline", "ios-stopwatch", "ios-stopwatch-outline",
+			"ios-timer", "ios-timer-outline", "ios-clock", "ios-clock-outline", "ios-time", "ios-time-outline", "ios-calendar", "ios-calendar-outline",
+			"ios-photos", "ios-photos-outline", "ios-albums", "ios-albums-outline", "ios-camera", "ios-camera-outline", "ios-reverse-camera",
+			"ios-reverse-camera-outline", "ios-eye", "ios-eye-outline", "ios-bolt", "ios-bolt-outline", "ios-color-wand", "ios-color-wand-outline",
+			"ios-color-servlet", "ios-color-servlet-outline", "ios-grid-view", "ios-grid-view-outline", "ios-crop-strong", "ios-crop", "ios-barcode",
+			"ios-barcode-outline", "ios-briefcase", "ios-briefcase-outline", "ios-medkit", "ios-medkit-outline", "ios-medical", "ios-medical-outline",
+			"ios-infinite", "ios-infinite-outline", "ios-calculator", "ios-calculator-outline", "ios-keypad", "ios-keypad-outline", "ios-telephone",
+			"ios-telephone-outline", "ios-drag", "ios-location", "ios-location-outline", "ios-navigate", "ios-navigate-outline", "ios-locked",
+			"ios-locked-outline", "ios-unlocked", "ios-unlocked-outline", "ios-monitor", "ios-monitor-outline", "ios-printer", "ios-printer-outline",
+			"ios-game-controller-a", "ios-game-controller-a-outline", "ios-game-controller-b", "ios-game-controller-b-outline", "ios-americanfootball",
+			"ios-americanfootball-outline", "ios-baseball", "ios-baseball-outline", "ios-basketball", "ios-basketball-outline", "ios-tennisball",
+			"ios-tennisball-outline", "ios-football", "ios-football-outline", "ios-body", "ios-body-outline", "ios-person", "ios-person-outline",
+			"ios-personadd", "ios-personadd-outline", "ios-people", "ios-people-outline", "ios-musical-notes", "ios-musical-note", "ios-bell",
+			"ios-bell-outline", "ios-mic", "ios-mic-outline", "ios-mic-off", "ios-volume-high", "ios-volume-low", "ios-play", "ios-play-outline", "ios-pause",
+			"ios-pause-outline", "ios-recording", "ios-recording-outline", "ios-fastforward", "ios-fastforward-outline", "ios-rewind", "ios-rewind-outline",
+			"ios-skipbackward", "ios-skipbackward-outline", "ios-skipforward", "ios-skipforward-outline", "ios-shuffle-strong", "ios-shuffle", "ios-videocam",
+			"ios-videocam-outline", "ios-film", "ios-film-outline", "ios-flask", "ios-flask-outline", "ios-lightbulb", "ios-lightbulb-outline",
+			"ios-wineglass", "ios-wineglass-outline", "ios-pint", "ios-pint-outline", "ios-nutrition", "ios-nutrition-outline", "ios-flower",
+			"ios-flower-outline", "ios-rose", "ios-rose-outline", "ios-paw", "ios-paw-outline", "ios-flame", "ios-flame-outline", "ios-sunny",
+			"ios-sunny-outline", "ios-partlysunny", "ios-partlysunny-outline", "ios-cloudy", "ios-cloudy-outline", "ios-rainy", "ios-rainy-outline",
+			"ios-thunderstorm", "ios-thunderstorm-outline", "ios-snowy", "ios-moon", "ios-moon-outline", "ios-cloudy-night", "ios-cloudy-night-outline",
+			"android-arrow-up", "android-arrow-forward", "android-arrow-down", "android-arrow-back", "android-arrow-dropup", "android-arrow-dropup-circle",
+			"android-arrow-dropright", "android-arrow-dropright-circle", "android-arrow-dropdown", "android-arrow-dropdown-circle", "android-arrow-dropleft",
+			"android-arrow-dropleft-circle", "android-add", "android-add-circle", "android-remove", "android-remove-circle", "android-close", "android-cancel",
+			"android-radio-button-off", "android-radio-button-on", "android-checkmark-circle", "android-checkbox-outline-blank", "android-checkbox-outline",
+			"android-checkbox-blank", "android-checkbox", "android-done", "android-done-all", "android-menu", "android-more-horizontal",
+			"android-more-vertical", "android-refresh", "android-sync", "android-wifi", "android-call", "android-apps", "android-settings", "android-options",
+			"android-funnel", "android-search", "android-home", "android-cloud-outline", "android-cloud", "android-download", "android-upload",
+			"android-cloud-done", "android-cloud-circle", "android-favorite-outline", "android-favorite", "android-star-outline", "android-star-half",
+			"android-star", "android-calendar", "android-alarm-clock", "android-time", "android-stopwatch", "android-watch", "android-locate",
+			"android-navigate", "android-pin", "android-compass", "android-map", "android-walk", "android-bicycle", "android-car", "android-bus",
+			"android-subway", "android-train", "android-boat", "android-plane", "android-restaurant", "android-bar", "android-cart", "android-camera",
+			"android-image", "android-film", "android-color-palette", "android-create", "android-mail", "android-drafts", "android-send", "android-archive",
+			"android-delete", "android-attach", "android-share", "android-share-alt", "android-bookmark", "android-document", "android-clipboard",
+			"android-list", "android-folder-open", "android-folder", "android-print", "android-open", "android-exit", "android-contract", "android-expand",
+			"android-globe", "android-chat", "android-textsms", "android-hangout", "android-happy", "android-sad", "android-person", "android-people",
+			"android-person-add", "android-contact", "android-contacts", "android-playstore", "android-lock", "android-unlock", "android-microphone",
+			"android-microphone-off", "android-notifications-none", "android-notifications", "android-notifications-off", "android-volume-mute",
+			"android-volume-down", "android-volume-up", "android-volume-off", "android-hand", "android-desktop", "android-laptop", "android-phone-portrait",
+			"android-phone-landscape", "android-bulb", "android-sunny", "android-alert", "android-warning", "social-twitter", "social-twitter-outline",
+			"social-facebook", "social-facebook-outline", "social-googleplus", "social-googleplus-outline", "social-google", "social-google-outline",
+			"social-dribbble", "social-dribbble-outline", "social-octocat", "social-github", "social-github-outline", "social-instagram",
+			"social-instagram-outline", "social-whatsapp", "social-whatsapp-outline", "social-snapchat", "social-snapchat-outline", "social-foursquare",
+			"social-foursquare-outline", "social-pinterest", "social-pinterest-outline", "social-rss", "social-rss-outline", "social-tumblr",
+			"social-tumblr-outline", "social-wordpress", "social-wordpress-outline", "social-reddit", "social-reddit-outline", "social-hackernews",
+			"social-hackernews-outline", "social-designernews", "social-designernews-outline", "social-yahoo", "social-yahoo-outline", "social-buffer",
+			"social-buffer-outline", "social-skype", "social-skype-outline", "social-linkedin", "social-linkedin-outline", "social-vimeo",
+			"social-vimeo-outline", "social-twitch", "social-twitch-outline", "social-youtube", "social-youtube-outline", "social-dropbox",
+			"social-dropbox-outline", "social-apple", "social-apple-outline", "social-android", "social-android-outline", "social-windows",
+			"social-windows-outline", "social-html5", "social-html5-outline", "social-css3", "social-css3-outline", "social-javascript",
+			"social-javascript-outline", "social-angular", "social-angular-outline", "social-nodejs", "social-sass", "social-python", "social-chrome",
+			"social-chrome-outline", "social-codepen", "social-codepen-outline", "social-markdown", "social-tux", "social-freebsd-devil", "social-usd",
+			"social-usd-outline", "social-bitcoin", "social-bitcoin-outline", "social-yen", "social-yen-outline", "social-euro", "social-euro-outline" ];
+</script>
+</html>

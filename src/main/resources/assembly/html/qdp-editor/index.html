@@ -1,0 +1,479 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <title>QDP Editor</title>
+
+    <link href="../resources/jsoneditor/jsoneditor.css" rel="stylesheet" type="text/css">
+    <script src="../resources/jsoneditor/jsoneditor.js"></script>
+
+    <style type="text/css">
+    body {
+      width: 98%;
+      font: 11pt sans-serif;
+    }
+    #jsoneditor {
+      width: 100%;
+      height: 500px;
+    }
+    </style>
+</head>
+<body>
+<h1>QDP Editor 1</h1>
+
+<div id="jsoneditor" stylea="width: 1000px; height: 500px;"></div>
+
+<script>
+
+var json = {
+    groupId:'org.iff.qdp.demo',
+    artifactId:'qdp-demo',
+    version:'1.0.0',
+    templateVersion:'1.0.0',
+    modules:[
+        {
+            name:'system',
+            packageName:'system',
+            alias:'系统管理模块',
+            businesses:[
+                {
+                    name:'user',
+                    packageName:'user',
+                    alias:'用户管理',
+                    tableName:'USER',
+                    functions:[
+                        {
+                            name:'index',
+                            fileName:'index',
+                            alias:'用户管理',
+                            type:'Grid',
+                            fields:[
+                                {
+                                    fieldName:'id',
+                                    fieldAlias:'主键',
+                                    fieldColumn:'ID',
+                                    fieldColType:'VARCHAR',
+                                    fieldJavaType:'String',
+                                    fieldLength:0,
+                                    fieldScale:0,
+                                    fieldValue:'',
+                                    fieldDesc:'主键',
+                                    fieldSeq:100,
+                                    isNull:'N',
+                                    isPk:'N',
+                                    isIndex:'N',
+                                    isUnique:'N',
+                                    isAutoIncrease:'N',
+                                    isNonTableColumn:'N',
+                                    ableAdd:'Y',
+                                    ableEdit:'Y',
+                                    ableList:'Y',
+                                    ableInfo:'Y',
+                                    ableSearch:'Y',
+                                    ableSort:'N',
+                                    htmlWidth:'',
+                                    htmlWordbreak:'Y',
+                                    dataUrl:'',
+                                    dataJson:'',
+                                    dataJsonSelect:'',
+                                    typeAll:'text',
+                                    typeAdd:'text',
+                                    typeEdit:'text',
+                                    typeGrid:'text',
+                                    typeInfo:'text',
+                                    typeSearch:'text',
+                                    refTable:'',
+                                    refField:'',
+                                    refLabelField:'',
+                                    midTable:'',
+                                    midMainField:'',
+                                    midSecondField:'',
+                                    uniqueFields:[],
+                                    ruleType:'',
+                                    ruleRequired:'N',
+                                    ruleRequiredMsg:'是否必须的错误信息',
+                                    ruleRegex:'',
+                                    ruleRegexMsg:'正则检查的错误信息',
+                                    ruleRangeMin:0,
+                                    ruleRangeMax:0,
+                                    ruleRangeMsg:'范围的错误信息',
+                                    ruleLength:0,
+                                    ruleLengthMsg:'长度错误信息',
+                                    ruleEnums:'',
+                                    ruleEnumsMsg:'枚举错误信息',
+                                    ruleNotBlank:'N',
+                                    ruleNotBlankMsg:'是否非空错误信息',
+                                    exJsonData:''
+                                }
+                            ]
+                        }
+                    ],
+                    actions:[
+                        {actionName : '返回', eventName : 'back', actionType : 'back', shortCut : 'B', actionIcon : 'el-icon-ion-arrow-left-a'},
+                        {actionName : '刷新', eventName : 'reload', actionType : 'reload', shortCut : 'R', actionIcon : 'el-icon-ion-refresh'},
+                        {actionName : '添加', eventName : 'add', actionType : 'add', shortCut : 'A', actionIcon : 'el-icon-ion-plus-round'},
+                        {actionName : '添加根节点', eventName : 'add', actionType : 'add', shortCut : 'A', actionIcon : 'el-icon-ion-plus-round'},
+                        {actionName : '添加子节点', eventName : 'addChild', actionType : 'edit', shortCut : 'Z', actionIcon : 'el-icon-ion-plus-circled'},
+                        {actionName : '修改', eventName : 'edit', actionType : 'edit', shortCut : 'E', actionIcon : 'el-icon-edit'},
+                        {actionName : '详情', eventName : 'info', actionType : 'info', shortCut : 'I', actionIcon : 'el-icon-ion-information'},
+                        {actionName : '删除', eventName : 'delete', actionType : 'delete', shortCut : 'D', actionIcon : 'el-icon-ion-trash-b'}
+                    ]
+                }
+            ]
+        }
+    ]
+};
+var templates = [
+    {
+        text: 'Project',
+        title: '添加项目',
+        field: 'ProjectModel',
+        value: {
+            groupId:'org.iff.qdp.demo',
+            artifactId:'qdp-demo',
+            version:'1.0.0',
+            templateVersion:'1.0.0',
+            modules:[]
+        }
+    },
+    {
+        text: 'Module',
+        title: '添加项目的模块',
+        field: 'ModuleModel',
+        value: {
+            name:'system',
+            packageName:'system',
+            alias:'系统管理模块',
+            businesses:[]
+        }
+    },
+    {
+        text: 'Business',
+        title: '添加项目模块的业务模型',
+        field: 'BusinessModel',
+        value: {
+            name:'user',
+            packageName:'user',
+            alias:'用户管理',
+            tableName:'USER',
+            functions:[],
+            actions:[]
+        }
+    },
+    {
+        text: 'Action',
+        title: '添加业务模型的操作',
+        field: 'ActionModel',
+        value: {
+            actionName:'添加|修改|删除',
+            eventName:'Add|Edit|Remove',
+            actionType:'',
+            shortCut:'',
+            actionIcon:''
+        }
+    },
+    {
+        text: 'Action-back',
+        title: '返回-操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '返回',
+            eventName : 'back',
+            actionType : 'back',
+            shortCut : 'B',
+            actionIcon : 'el-icon-ion-arrow-left-a'
+        }
+    },
+    {
+        text: 'Action-reload',
+        title: '刷新-操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '刷新',
+            eventName : 'reload',
+            actionType : 'reload',
+            shortCut : 'R',
+            actionIcon : 'el-icon-ion-refresh'
+        }
+    },
+    {
+        text: 'Action-add',
+        title: '添加-操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '添加',
+            eventName : 'add',
+            actionType : 'add',
+            shortCut : 'A',
+            actionIcon : 'el-icon-ion-plus-round'
+        }
+    },
+    {
+        text: 'Action-add-tree',
+        title: '添加根节点-树操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '添加根节点',
+            eventName : 'add',
+            actionType : 'add',
+            shortCut : 'A',
+            actionIcon : 'el-icon-ion-plus-round'
+        }
+    },
+    {
+        text: 'Action-addChild-tree',
+        title: '添加子节点-树操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '添加子节点',
+            eventName : 'addChild',
+            actionType : 'edit',
+            shortCut : 'Z',
+            actionIcon : 'el-icon-ion-plus-circled'
+        }
+    },
+    {
+        text: 'Action-edit',
+        title: '修改-操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '修改',
+            eventName : 'edit',
+            actionType : 'edit',
+            shortCut : 'E',
+            actionIcon : 'el-icon-edit'
+        }
+    },
+    {
+        text: 'Action-info',
+        title: '详情-操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '详情',
+            eventName : 'info',
+            actionType : 'info',
+            shortCut : 'I',
+            actionIcon : 'el-icon-ion-information'
+        }
+    },
+    {
+        text: 'Action-delete',
+        title: '删除-操作-默认',
+        field: 'ActionModel',
+        value: {
+            actionName : '删除',
+            eventName : 'delete',
+            actionType : 'delete',
+            shortCut : 'D',
+            actionIcon : 'el-icon-ion-trash-b'
+        }
+    },
+    {
+        text: 'Function',
+        title: '添加业务模型的功能',
+        field: 'FunctionModel',
+        value: {
+            name:'index',
+            fileName:'index',
+            alias:'用户管理',
+            type:'',
+            fields:[]
+        }
+    },
+    {
+        text: 'Field',
+        title: '添加字段',
+        field: 'FieldModel',
+        value: {
+            fieldName:'id',
+            fieldAlias:'主键',
+            fieldColumn:'ID',
+            fieldColType:'VARCHAR',
+            fieldJavaType:'String',
+            fieldLength:0,
+            fieldScale:0,
+            fieldValue:'',
+            fieldDesc:'主键',
+            fieldSeq:100,
+            isNull:'N',
+            isPk:'N',
+            isIndex:'N',
+            isUnique:'N',
+            isAutoIncrease:'N',
+            isNonTableColumn:'N',
+            ableAdd:'Y',
+            ableEdit:'Y',
+            ableList:'Y',
+            ableInfo:'Y',
+            ableSearch:'Y',
+            ableSort:'N',
+            htmlWidth:'',
+            htmlWordbreak:'Y',
+            dataUrl:'',
+            dataJson:'',
+            dataJsonSelect:'',
+            typeAll:'text',
+            typeAdd:'text',
+            typeEdit:'text',
+            typeGrid:'text',
+            typeInfo:'text',
+            typeSearch:'text',
+            refTable:'',
+            refField:'',
+            refLabelField:'',
+            midTable:'',
+            midMainField:'',
+            midSecondField:'',
+            uniqueFields:[],
+            ruleType:'',
+            ruleRequired:'N',
+            ruleRequiredMsg:'是否必须的错误信息',
+            ruleRegex:'',
+            ruleRegexMsg:'正则检查的错误信息',
+            ruleRangeMin:0,
+            ruleRangeMax:0,
+            ruleRangeMsg:'范围的错误信息',
+            ruleLength:0,
+            ruleLengthMsg:'长度错误信息',
+            ruleEnums:'',
+            ruleEnumsMsg:'枚举错误信息',
+            ruleNotBlank:'N',
+            ruleNotBlankMsg:'是否非空错误信息',
+            exJsonData:''
+        }
+    }
+];
+//https://blog.csdn.net/silence_xiao/article/details/81303935
+var projectSchema = {
+    title: 'QDP project Schema',
+    type: 'object',
+    properties: {
+        groupId: {type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9.-_]*', description: 'Maven项目中的groupId, ^[a-zA-Z][a-zA-Z0-9.-_]*'},
+        artifactId: {type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9.-_]*', description: 'Maven项目中的artifactId, ^[a-zA-Z][a-zA-Z0-9.-_]*'},
+        version: {type: 'string', pattern: '[a-zA-Z0-9.-_]*', description: 'Maven项目中的version, [a-zA-Z0-9.-_]*'},
+        templateVersion: {type: 'string', enum: ['1.0.0','2.0.0'], pattern: '[a-zA-Z0-9.-_]*', description: '项目代码模板, [a-zA-Z0-9.-_]*'},
+        modules: {type: 'array', minItems: 1, items: {'$ref': 'Module'}, description: '项目模块'}
+    },
+    required: ['groupId', 'artifactId', 'version', 'templateVersion', 'modules']
+};
+var moduleSchema = {
+    title: 'QDP Module Schema',
+    type: 'object',
+    properties: {
+        name: {type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '项目模块的名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        packageName:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '项目模块的包名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        alias:{type: 'string', description: '模块的中文名称'},
+        businesses:{type: 'array', minItems: 1, items: {type: 'object', '$ref': 'Business'}, description: '业务模型'}
+    },
+    required: ['name', 'packageName', 'alias', 'businesses']
+};
+var businessSchema = {
+    title: 'QDP Business Schema',
+    type: 'object',
+    properties: {
+        name:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '业务模型的名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        packageName:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '业务模型的包名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        alias:{type: 'string', description: '业务模型的中文名称'},
+        tableName:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '数据库表的名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        functions:{type: 'array', minItems: 1, items: {type: 'object', '$ref': 'Function'}, description: '业务模型的功能'},
+        actions:{type: 'array', minItems: 1, items: {type: 'object', '$ref': 'Action'}, description: '业务模型的操作'}
+    },
+    required: ['name', 'packageName', 'alias', 'tableName', 'functions', 'actions']
+};
+var actionSchema = {
+    title: 'QDP Action Schema',
+    type: 'object',
+    properties: {
+        actionName:{type: 'string', description: '操作名称'},
+        eventName:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '操作事件，^[a-zA-Z][a-zA-Z0-9_]*'},
+        actionType:{type: 'string', enum: ['modal', 'link', 'delete', 'back', 'reload', 'add', 'edit', 'info'], description: '操作类型'},
+        shortCut:{type: 'string', pattern: '[a-zA-Z0-9]?', description: '快捷键，[a-zA-Z0-9]?'},
+        actionIcon:{type: 'string', description: '操作图标'}
+    },
+    required: ['actionName', 'eventName', 'actionType', 'shortCut', 'actionIcon']
+};
+var functionSchema = {
+    title: 'QDP Function Schema',
+    type: 'object',
+    properties: {
+        name:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '功能的名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        fileName:{type: 'string', description: '功能的文件名称'},
+        alias:{type: 'string', description: '功能的中文名称'},
+        type: {type: 'string', enum: ['Grid','Tree','SelectOneGrid','SelectOneTree','SelectMultiGrid','SelectMultiTree','Index','Form','DomainOnly','NoShow'], description: '功能的类型'},
+        fields:{type: 'array', minItems: 1, items: {type: 'object', '$ref': 'Field'}, description: '字段'}
+    },
+    required: ['name', 'fileName', 'alias', 'type', 'fields']
+};
+var fieldSchema = {
+    title: 'QDP Field Schema',
+    type: 'object',
+    properties: {
+        fieldName:{type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_]*', description: '字段名称，^[a-zA-Z][a-zA-Z0-9_]*'},
+        fieldAlias:{type: 'string', description: '字段中文名'},
+        fieldColumn:{type: 'string', pattern: '^[A-Z][A-Z0-9_]*', description: '数据库字段名称，^[A-Z][A-Z0-9_]*'},
+        fieldColType:{type: 'string', enum:['VARCHAR','CHAR','DATETIME','TIMESTAMP','INT','BOOLEAN','SMALLINT','DOUBLE','FLOAT','DECIMAL','NUMERIC','BLOB','MEDIUMBLOB','LONGBLOB','TEXT','MEDIUMTEXT','LONGTEXT','CLOB'], description: '数据库字段类型'},
+        fieldJavaType:{type: 'string', enum: ['String','Integer','Long','Date','Double','BigDecimal','Boolean','Float','Short','Byte','byte[]'], description: 'Java字段类型'},
+        fieldLength:{type: 'integer', description: '字段长度'},
+        fieldScale:{type: 'integer', description: '字段精度'},
+        fieldValue:{type: 'string', description: '字段默认值'},
+        fieldDesc:{type: 'string', description: '字段描述'},
+        fieldSeq:{type: 'integer', description: '字段顺序'},
+        isNull:{type: 'string', enum: ['Y','N'], description: '是否为空'},
+        isPk:{type: 'string', enum: ['Y','N'], description: '是否为主键'},
+        isIndex:{type: 'string', enum: ['Y','N'], description: '是否添加索引'},
+        isUnique:{type: 'string', enum: ['Y','N'], description: '是否添加唯一索引'},
+        isAutoIncrease:{type: 'string', enum: ['Y','N'], description: '是否自增长'},
+        isNonTableColumn:{type: 'string', enum: ['Y','N'], description: '是否为非数据库字段'},
+        ableAdd:{type: 'string', enum: ['Y','N'], description: '是否可添加'},
+        ableEdit:{type: 'string', enum: ['Y','N'], description: '是否可修改'},
+        ableList:{type: 'string', enum: ['Y','N'], description: '是否为列表'},
+        ableInfo:{type: 'string', enum: ['Y','N'], description: '是否在信息页面显示'},
+        ableSearch:{type: 'string', enum: ['Y','N'], description: '是否可查询'},
+        ableSort:{type: 'string', enum: ['Y','N'], description: '是否可排序'},
+        htmlWidth:{type: 'string', description: '页面字段宽度'},
+        htmlWordbreak:{type: 'string', enum: ['Y','N'], description: '是否可换行'},
+        dataUrl:{type: 'string', description: '数据来源URL'},
+        dataJson:{type: 'string', description: 'JSON数据'},
+        dataJsonSelect:{type: 'string', description: 'JSON数据模板'},
+        typeAll:{type: 'string', enum: ['text','textarea','password','radio','checkbox','switch','select','date','time','cascader','number','rate','file','modal','label','icon'], description: '默认类型'},
+        typeAdd:{type: 'string', enum: ['text','textarea','password','radio','checkbox','switch','select','date','time','cascader','number','rate','file','modal','label','icon'], description: '添加页面上字段显示的类型'},
+        typeEdit:{type: 'string', enum: ['text','textarea','password','radio','checkbox','switch','select','date','time','cascader','number','rate','file','modal','label','icon'], description: '修改页面上字段显示的类型'},
+        typeGrid:{type: 'string', enum: ['text','textarea','password','radio','checkbox','switch','select','date','time','cascader','number','rate','file','modal','label','icon'], description: '列表页面上字段显示的类型'},
+        typeInfo:{type: 'string', enum: ['text','textarea','password','radio','checkbox','switch','select','date','time','cascader','number','rate','file','modal','label','icon'], description: '信息页面上字段显示的类型'},
+        typeSearch:{type: 'string', enum: ['text','textarea','password','radio','checkbox','switch','select','date','time','cascader','number','rate','file','modal','label','icon'], description: '搜索页面上字段显示的类型'},
+        refTable:{type: 'string', pattern: '^[a-zA-Z]*[a-zA-Z0-9_]*', description: '对应的外键表，^[a-zA-Z]*[a-zA-Z0-9_]*'},
+        refField:{type: 'string', pattern: '^[a-zA-Z]*[a-zA-Z0-9_]*', description: '对应的外键表的字段，^[a-zA-Z]*[a-zA-Z0-9_]*'},
+        refLabelField:{type: 'string', pattern: '^[a-zA-Z]*[a-zA-Z0-9_]*', description: '外键表显示字段，^[a-zA-Z]*[a-zA-Z0-9_]*'},
+        midTable:{type: 'string', pattern: '^[a-zA-Z]*[a-zA-Z0-9_]*', description: '对应的中间表，^[a-zA-Z]*[a-zA-Z0-9_]*'},
+        midMainField:{type: 'string', pattern: '^[a-zA-Z]*[a-zA-Z0-9_]*', description: '当前表与中间表的引用字段，^[a-zA-Z]*[a-zA-Z0-9_]*'},
+        midSecondField:{type: 'string', pattern: '^[a-zA-Z]*[a-zA-Z0-9_]*', description: '中间表对应的字段，^[a-zA-Z]*[a-zA-Z0-9_]*'},
+        uniqueFields:{type: 'array', items:{type: 'string'}, description: '唯一字段'},
+        ruleType:{type: 'string', description: '字段类型'},
+        ruleRequired:{type: 'string', enum: ['Y','N'], description: '是否必须'},
+        ruleRequiredMsg:{type: 'string', description: '是否必须的错误信息'},
+        ruleRegex:{type: 'string', description: '正则检查'},
+        ruleRegexMsg:{type: 'string', description: '正则检查的错误信息'},
+        ruleRangeMin:{type: 'number', description: '最小值'},
+        ruleRangeMax:{type: 'number', description: '最大值'},
+        ruleRangeMsg:{type: 'string', description: '范围的错误信息'},
+        ruleLength:{type: 'integer', description: '长度'},
+        ruleLengthMsg:{type: 'string', description: '长度错误信息'},
+        ruleEnums:{type: 'string', description: '枚举'},
+        ruleEnumsMsg:{type: 'string', description: '枚举错误信息'},
+        ruleNotBlank:{type: 'string', enum: ['Y','N'], description: '是否非空'},
+        ruleNotBlankMsg:{type: 'string', description: '是否非空错误信息'},
+        exJsonData:{type: 'string', description: '扩展JSON'}
+    },
+    required: ['fieldName', 'fieldAlias', 'fieldColumn', 'fieldColType', 'fieldJavaType', 'fieldLength', 'fieldScale', 'fieldValue', 'fieldDesc', 'fieldSeq', 'isNull', 'isPk', 'isIndex', 'isUnique', 'isAutoIncrease', 'isNonTableColumn', 'ableAdd', 'ableEdit', 'ableList', 'ableInfo', 'ableSearch', 'ableSort', 'htmlWidth', 'htmlWordbreak', 'dataUrl', 'dataJson', 'dataJsonSelect', 'typeAll', 'typeAdd', 'typeEdit', 'typeGrid', 'typeInfo', 'typeSearch', 'refTable', 'refField', 'refLabelField', 'midTable', 'midMainField', 'midSecondField', 'uniqueFields', 'ruleType', 'ruleRequired', 'ruleRequiredMsg', 'ruleRegex', 'ruleRegexMsg', 'ruleRangeMin', 'ruleRangeMax', 'ruleRangeMsg', 'ruleLength', 'ruleLengthMsg', 'ruleEnums', 'ruleEnumsMsg', 'ruleNotBlank', 'ruleNotBlankMsg', 'exJsonData']
+};
+var options = {
+    schema: projectSchema,
+    schemaRefs: {Module: moduleSchema, Business: businessSchema, Function: functionSchema, Action: actionSchema, Field: fieldSchema},
+    templates: templates
+};
+// create the editor
+var container = document.getElementById('jsoneditor');
+var editor = new JSONEditor(container, options, json);
+editor.expandAll();
+</script>
+</body>
+</html>
