@@ -137,7 +137,7 @@ public class NettyHttpServletRequest implements HttpServletRequest {
     }
 
     public Enumeration getHeaderNames() {
-        return Collections.enumeration(ctx.getHeaders().keySet());
+        return Collections.enumeration(ctx.getHeaders().names());
     }
 
     public int getIntHeader(String name) {

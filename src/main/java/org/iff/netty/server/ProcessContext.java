@@ -29,7 +29,6 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.URLEncoder;
 import java.util.*;
-import java.util.Map.Entry;
 
 /**
  * contains a request infos.
@@ -62,7 +61,7 @@ public class ProcessContext {
     private String uri;
     private String requestPath;
     private String httpMethod;
-    private Map<String, String> headers;
+    private HttpHeaders headers;
     private Map<String, List<String>> queryParam;
     private Tuple<Map<String, List<String>>, Map<String, File>> postData;
     private Set<Cookie> cookies;
@@ -87,8 +86,7 @@ public class ProcessContext {
             context.request = request;
             context.msg = msg;
             context.outputBuffer = UnpooledByteBufAllocator.DEFAULT.buffer(1024);
-            context.response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                    context.outputBuffer);
+            context.response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, context.outputBuffer);
             context.contextPath = contextPath;
             if ("POST".equalsIgnoreCase(request.method().name()) && request instanceof FullHttpRequest) {
                 ByteBuf content = ((FullHttpRequest) request).content();
@@ -268,31 +266,28 @@ public class ProcessContext {
         return httpMethod;
     }
 
-    public Map<String, String> getHeaders() {
+    public HttpHeaders getHeaders() {
         if (headers != null) {
             return headers;
         }
-        headers = new LinkedHashMap<String, String>();
-        for (Entry<String, String> entry : request.headers().entries()) {
-            headers.put(StringUtils.lowerCase(entry.getKey()), entry.getValue());
-        }
+        headers = request.headers().copy();
         // get remote address
         {
             InetSocketAddress remoteAddress = (InetSocketAddress) ctx.channel().remoteAddress();
-            headers.put(ATTR_REMOTE_ADDRESS, remoteAddress.getAddress().getHostAddress());
-            headers.put(ATTR_REMOTE_PORT, String.valueOf(remoteAddress.getPort()));
-            headers.put(ATTR_REMOTE_HOST, remoteAddress.getHostName());
+            headers.add(ATTR_REMOTE_ADDRESS, remoteAddress.getAddress().getHostAddress());
+            headers.add(ATTR_REMOTE_PORT, String.valueOf(remoteAddress.getPort()));
+            headers.add(ATTR_REMOTE_HOST, remoteAddress.getHostName());
         }
         // get local address
         {
             InetSocketAddress socketAddress = (InetSocketAddress) ctx.channel().localAddress();
-            headers.put(ATTR_LOCAL_ADDRESS, socketAddress.getAddress().getHostAddress());
-            headers.put(ATTR_LOCAL_HOST, socketAddress.getHostName());
-            headers.put(ATTR_LOCAL_PORT, String.valueOf(socketAddress.getPort()));
+            headers.add(ATTR_LOCAL_ADDRESS, socketAddress.getAddress().getHostAddress());
+            headers.add(ATTR_LOCAL_HOST, socketAddress.getHostName());
+            headers.add(ATTR_LOCAL_PORT, String.valueOf(socketAddress.getPort()));
         }
         // is secure
         {
-            headers.put(ATTR_IS_SECURE, String.valueOf(ctx.channel().pipeline().get(SslHandler.class) != null));
+            headers.add(ATTR_IS_SECURE, String.valueOf(ctx.channel().pipeline().get(SslHandler.class) != null));
         }
         return headers;
     }
@@ -346,43 +341,44 @@ public class ProcessContext {
     protected Tuple<Map<String, List<String>>, Map<String, File>> processPostData(HttpPostRequestDecoder decoder) {
         Map<String, List<String>> requestParameters = new HashMap<String, List<String>>();
         Map<String, File> requestFiles = new HashMap<String, File>();
+        Tuple<Map<String, List<String>>, Map<String, File>> tuple = Tuple.create(requestParameters, requestFiles);
 
+        if (!(msg instanceof HttpContent)) {
+            return tuple;
+        }
         try {
-            if (msg instanceof HttpContent) {
-                HttpContent chunk = (HttpContent) msg;
-                decoder.offer(chunk);
-                while (hasNextDecoder(decoder)) {
-                    InterfaceHttpData data = decoder.next();
-                    if (data == null) {
-                        continue;
-                    }
-                    try {
-                        if (data.getHttpDataType() == HttpDataType.Attribute) {
-                            Attribute attribute = (Attribute) data;
-                            List<String> values = requestParameters.get(attribute.getName());
-                            if (values == null) {
-                                values = new ArrayList<String>();
-                                requestParameters.put(attribute.getName(), values);
-                            }
-                            values.add(attribute.getValue());
-                        } else if (data.getHttpDataType() == HttpDataType.FileUpload) {
-                            FileUpload fileUpload = (FileUpload) data;
-                            if (fileUpload.isCompleted() && fileUpload.length() > 0) {
-                                File tempFile = File.createTempFile("agent", "upload");
-                                fileUpload.renameTo(tempFile);
-                                requestFiles.put(fileUpload.getName(), tempFile);
-                            }
+            HttpContent chunk = (HttpContent) msg;
+            decoder.offer(chunk);
+            while (hasNextDecoder(decoder)) {
+                InterfaceHttpData data = decoder.next();
+                if (data == null) {
+                    continue;
+                }
+                try {
+                    if (data.getHttpDataType() == HttpDataType.Attribute) {
+                        Attribute attribute = (Attribute) data;
+                        List<String> values = requestParameters.get(attribute.getName());
+                        if (values == null) {
+                            values = new ArrayList<String>();
+                            requestParameters.put(attribute.getName(), values);
                         }
-                    } finally {
-                        data.release();
+                        values.add(attribute.getValue());
+                    } else if (data.getHttpDataType() == HttpDataType.FileUpload) {
+                        FileUpload fileUpload = (FileUpload) data;
+                        if (fileUpload.isCompleted() && fileUpload.length() > 0) {
+                            File tempFile = File.createTempFile("agent", "upload");
+                            fileUpload.renameTo(tempFile);
+                            requestFiles.put(fileUpload.getName(), tempFile);
+                        }
                     }
+                } finally {
+                    data.release();
                 }
             }
-        } catch (Exception ioe) {
-            ioe.printStackTrace();
-            Exceptions.runtime("Decode post data error!", ioe);
+        } catch (Exception e) {
+            Exceptions.runtime("ProcessContext Decode post data error!", e);
         }
-        return Tuple.create(requestParameters, requestFiles);
+        return tuple;
     }
 
     @Transient
@@ -556,7 +552,7 @@ public class ProcessContext {
             return target.getHttpMethod();
         }
 
-        public Map<String, String> getHeaders() {
+        public HttpHeaders getHeaders() {
             return target.getHeaders();
         }
 
@@ -594,6 +590,10 @@ public class ProcessContext {
 
         public boolean isProxy() {
             return true;
+        }
+
+        public String getRealIpAddr(Map<String, String> headers) {
+            return target.getRealIpAddr(headers);
         }
     }
 }
