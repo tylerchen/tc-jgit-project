@@ -143,7 +143,7 @@ public class HttpServer implements Runnable {
                     .group(bossGroup, workGroup)/**/
                     .channel(NioServerSocketChannel.class)/**/
                     .handler(new LoggingHandler(LogLevel.DEBUG))/**/
-                    .childHandler(new HttpServerInitializer(this, sslCtx, true));
+                    .childHandler(new HttpServerInitializer(this, sslCtx, sslCtx != null));
 
             serverBootstrap/**/
                     .option(ChannelOption.SO_BACKLOG, 1024)/**/
@@ -199,7 +199,7 @@ public class HttpServer implements Runnable {
         public HttpServerInitializer(HttpServer server, SslContext sslCtx, boolean sslEnable) {
             super();
             Assert.notNull(server);
-            Assert.notNull(sslCtx);
+            Assert.isTrue(!sslEnable || sslCtx != null);
             this.server = server;
             this.sslCtx = sslCtx;
             this.sslEnable = sslEnable;

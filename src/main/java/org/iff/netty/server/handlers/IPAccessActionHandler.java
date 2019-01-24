@@ -61,6 +61,6 @@ public class IPAccessActionHandler extends BaseActionHandler {
     }
 
     public int getOrder() {
-        return -1;
+        return -100;
     }
 }
