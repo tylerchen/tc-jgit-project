@@ -115,15 +115,20 @@ public class SystemHelper {
     public static Map<String, String> propToMap(Properties props) {
         Map<String, String> map = new LinkedHashMap<>();
         for (Map.Entry entry : props.entrySet()) {
-            if (entry.getKey() instanceof String) {
-                if (entry.getValue() instanceof String) {
-                    map.put((String) entry.getKey(), (String) entry.getValue());
-                } else {
-                    map.put((String) entry.getKey(), entry.getValue() == null ? "" : String.valueOf(entry.getValue()));
-                }
+            if (!(entry.getKey() instanceof String)) {
+                continue;
+            }
+            if (entry.getValue() instanceof String) {
+                map.put((String) entry.getKey(), (String) entry.getValue());
+            } else {
+                map.put((String) entry.getKey(), entry.getValue() == null ? "" : String.valueOf(entry.getValue()));
             }
         }
         return map;
+    }
+
+    public static String getDevPath(String path) {
+        return pathJoin("src/main/resources/assembly/", path);
     }
 
     public static String toStdFileName(String fileName) {
@@ -143,22 +148,23 @@ public class SystemHelper {
             path = StringUtils.defaultString(path);
             if (sb.length() == 0) {
                 sb.append(path);
-            } else {// consider path1=/p1/ , path2=/p2/, or path1=/p1, path2=p2/
-                int count = 0;
-                if (StringUtils.endsWith(sb, "/")) {
-                    count++;
-                }
-                if (StringUtils.startsWith(path, "/")) {
-                    count++;
-                }
-                if (count == 0) {
-                    sb.append("/").append(path);
-                } else if (count == 1) {
-                    sb.append(path);
-                } else {
-                    sb.setLength(sb.length() - 1);
-                    sb.append(path);
-                }
+                continue;
+            }
+            // consider path1=/p1/ , path2=/p2/, or path1=/p1, path2=p2/
+            int count = 0;
+            if (StringUtils.endsWith(sb, "/")) {
+                count++;
+            }
+            if (StringUtils.startsWith(path, "/")) {
+                count++;
+            }
+            if (count == 0) {
+                sb.append("/").append(path);
+            } else if (count == 1) {
+                sb.append(path);
+            } else {
+                sb.setLength(sb.length() - 1);
+                sb.append(path);
             }
         }
         return sb.toString();

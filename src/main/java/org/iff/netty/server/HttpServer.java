@@ -24,13 +24,18 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.io.output.StringBuilderWriter;
 import org.apache.commons.lang3.StringUtils;
-import org.iff.infra.util.Assert;
-import org.iff.infra.util.Exceptions;
+import org.iff.infra.util.*;
+import org.iff.jgit.util.SystemHelper;
 import org.iff.netty.server.handlers.ActionHandler;
 import org.iff.netty.server.handlers.ErrorActionHandler;
 import org.iff.netty.server.handlers.NoActionHandler;
 
+import javax.net.ssl.KeyManagerFactory;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.PrintWriter;
+import java.security.KeyStore;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -65,10 +70,45 @@ public class HttpServer implements Runnable {
         this.config = config;
         setActionHandler(list);
         try {/*Configure SSL context*/
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            this.sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+            boolean sslEnable = "true".equals(SystemHelper.getProps().getProperty("server.ssl.enabled", "true"));
+            boolean fromFile = false, dynamic = sslEnable;
+            File keyStoreFile = null;
+            for (; sslEnable; sslEnable = false) {//借助 for-break 减少缩进=if(sslEnable){...}
+                String keyStorePath = SystemHelper.getProps().getProperty("server.ssl.key-store");
+                if (StringUtils.isBlank(keyStorePath)) {
+                    break;
+                }
+                keyStoreFile = SystemHelper.find("", new String[]{keyStorePath, SystemHelper.getDevPath(keyStorePath)});
+                if (!keyStoreFile.exists()) {
+                    Logger.warn("HttpServer ssl key store file not found from setting, dynamic create.");
+                    break;
+                }
+                fromFile = true;
+            }
+            if (fromFile) {
+                Logger.info("HttpServer loading ssl key store from file...");
+                String keyPassword = SystemHelper.getProps().getProperty("server.ssl.key-password");
+                String keyStorePassword = SystemHelper.getProps().getProperty("server.ssl.key-store-password");
+                String keyStoreType = SystemHelper.getProps().getProperty("server.ssl.key-store-type");
+
+                keyPassword = PreRequiredHelper.requireNotBlank(keyPassword, "HttpServer config server.ssl.key-password not set!");
+                keyStorePassword = PreRequiredHelper.requireNotBlank(keyStorePassword, "HttpServer config server.ssl.key-store-password not set!");
+                keyStoreType = PreRequiredHelper.requireNotBlank(keyStoreType, "HttpServer config server.ssl.key-store-type not set!");
+
+                KeyStore ks = KeyStore.getInstance(keyStoreType);
+                InputStream is = new FileInputStream(keyStoreFile); /// 证书存放地址
+                ks.load(is, keyStorePassword.toCharArray());
+                SocketHelper.closeWithoutError(is);
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(ks, keyPassword.toCharArray());
+                this.sslCtx = SslContextBuilder.forServer(kmf).build();
+            } else if (dynamic) {
+                Logger.info("HttpServer dynamic create ssl key store...");
+                SelfSignedCertificate ssc = new SelfSignedCertificate();
+                this.sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+            }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            Exceptions.runtime("HttpServer can not create ssl!", e);
         }
     }
 
@@ -103,7 +143,7 @@ public class HttpServer implements Runnable {
                     .group(bossGroup, workGroup)/**/
                     .channel(NioServerSocketChannel.class)/**/
                     .handler(new LoggingHandler(LogLevel.DEBUG))/**/
-                    .childHandler(new HttpServerInitializer(this, sslCtx, false));
+                    .childHandler(new HttpServerInitializer(this, sslCtx, true));
 
             serverBootstrap/**/
                     .option(ChannelOption.SO_BACKLOG, 1024)/**/
