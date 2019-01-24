@@ -29,28 +29,29 @@ public class IPAccessActionHandler extends BaseActionHandler {
         String clientIp = ctx.getHeaders().get("client_ip");
         Object obj = ctx.getConfig().get("access.ip");
         if (obj == null) {
-            Logger.debug(FCS.get("Config access.ip is not set, block {0} access!", clientIp));
+            Logger.debug(FCS.get("IPAccessActionHandler Config access.ip is not set, block {0} access!", clientIp));
             /*return false will process next RestHandler*/
             return false;
         }
         if (StringUtils.isBlank(clientIp)) {
-            Logger.debug(FCS.get("No client ip found, block {0} access!", clientIp));
+            Logger.debug(FCS.get("IPAccessActionHandler No client ip found, block {0} access!", clientIp));
             /*return false will process next RestHandler*/
             return false;
         }
         String accessIp = obj.toString();
-        if (StringUtils.isNotBlank(accessIp)) {
-            String[] ips = StringUtils.split(accessIp, ',');
-            for (String aip : ips) {
-                boolean match = StringHelper.wildCardMatch(clientIp, aip.trim());
-                if (match) {
-                    Logger.debug(FCS.get("Accept {0} access!", clientIp));
-                    /*return false will process next RestHandler*/
-                    return false;
-                }
+        if (StringUtils.isBlank(accessIp)) {
+            return true;
+        }
+        String[] ips = StringUtils.split(accessIp, ',');
+        for (String aip : ips) {
+            boolean match = StringHelper.wildCardMatch(clientIp, aip.trim());
+            if (match) {
+                Logger.debug(FCS.get("IPAccessActionHandler Accept {0} access!", clientIp));
+                /*return false will process next RestHandler*/
+                return false;
             }
         }
-        Logger.debug(FCS.get("Block {0} access!", clientIp));
+        Logger.debug(FCS.get("IPAccessActionHandler Block {0} access!", clientIp));
         /*return true will block next RestHandler*/
         return true;
     }

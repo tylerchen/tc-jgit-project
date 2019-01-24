@@ -73,7 +73,7 @@ public class SystemHelper {
         if (StringUtils.isBlank(homeDir)) {
             homeDir = new File("").getAbsolutePath();
             System.setProperty(PROP_SERVER_PATH_HOME, homeDir);
-            System.out.println("read home dir in dev mode: " + homeDir);
+            System.out.println("SystemHelper read home dir in dev mode: " + homeDir);
         }
         return homeDir;
     }

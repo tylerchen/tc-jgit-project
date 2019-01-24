@@ -49,6 +49,12 @@ public abstract class BaseActionHandler implements ActionHandler {
         return "";
     }
 
+    /**
+     * 处理完成后如果返回 true 表示后续 ActionHandler 不再执行，返回 false 表示后续 ActionHandler 继续执行。
+     *
+     * @param ctx
+     * @return true: block the after ActionHandler, false: continue the after ActionHandler.
+     */
     public abstract boolean execute(ProcessContext ctx);
 
     public ActionHandler process(ProcessContext ctx) {
@@ -68,6 +74,11 @@ public abstract class BaseActionHandler implements ActionHandler {
         return error != null;
     }
 
+    /**
+     * 处理完成后如果返回 true 表示后续 ActionHandler 不再执行，返回 false 表示后续 ActionHandler 继续执行。
+     *
+     * @return true: block the after ActionHandler, false: continue the after ActionHandler.
+     */
     public boolean done() {
         if (error != null) {
             Exceptions.runtime("Fail to process ActionHandler!", error);

@@ -260,15 +260,14 @@ public class HttpServer implements Runnable {
             HttpRequest request = (HttpRequest) msg;
             String uri = request.uri();
             Iterator<ActionHandler> iterator = server.getChain().iterator();
-            ProcessContext processContext = ProcessContext.create(server.getConfig(), ctx, request, msg,
-                    this.server.getContext());
+            ProcessContext processContext = ProcessContext.create(server.getConfig(), ctx, request, msg, server.getContext());
             boolean hasProcess = false;
-            uri = StringUtils.removeStart(uri, this.server.getContext());
+            uri = StringUtils.removeStart(uri, server.getContext());
             uri = uri.length() > 0 && uri.charAt(0) != '/' ? ("/" + uri) : uri;
             try {
                 while (iterator.hasNext()) {
                     ActionHandler restHandler = iterator.next();
-                    if (restHandler.matchUri(uri)) {
+                    if (restHandler.matchUri(uri)) {//处理完成后返回 true 则不再继续处理。
                         hasProcess = hasProcess || restHandler.create().process(processContext).done();
                     }
                 }
@@ -357,12 +356,10 @@ public class HttpServer implements Runnable {
             return list;
         }
 
-
         public Iterator<ActionHandler> iterator() {
             pos.set(-1);
             return clone();
         }
-
 
         public boolean hasNext() {
             return actionHandlers.size() > 0 && actionHandlers.size() - 1 > pos.get();
@@ -387,13 +384,11 @@ public class HttpServer implements Runnable {
         private ActionHandler target;
 
         public ProxyActionHandler(ActionHandler target) {
-            super();
-            Assert.notNull(target);
-            this.target = target;
+            this.target = PreRequiredHelper.requireNotNull(target);
         }
 
         public ActionHandler getTarget() {
-            return this.target;
+            return target;
         }
 
         public int compareTo(ActionHandler other) {

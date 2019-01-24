@@ -23,13 +23,40 @@ import org.iff.netty.server.ProcessContext;
  */
 public interface ActionHandler {
 
+    /**
+     * step 2: create the new instance for process.
+     *
+     * @return
+     */
     ActionHandler create();
 
+    /**
+     * step 3: process the request.
+     *
+     * @param ctx
+     * @return
+     */
     ActionHandler process(ProcessContext ctx);
 
+    /**
+     * step 1: match the request uri.
+     *
+     * @param uri
+     * @return
+     */
     boolean matchUri(String uri);
 
+    /**
+     * step 0: sort the ActionHandlers.
+     *
+     * @return order asc
+     */
     int getOrder();
 
+    /**
+     * step 4: call done when process is completed.
+     *
+     * @return true: block the after ActionHandler, false: continue the after ActionHandler.
+     */
     boolean done();
 }

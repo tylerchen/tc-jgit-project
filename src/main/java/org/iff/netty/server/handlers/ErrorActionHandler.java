@@ -21,8 +21,7 @@ import java.nio.charset.Charset;
 public class ErrorActionHandler extends BaseActionHandler {
 
     public boolean execute(ProcessContext ctx) {
-        ctx.getOutputBuffer().writeCharSequence("[500] error: " + ctx.getAttributes().get("error"),
-                Charset.forName("UTF-8"));
+        ctx.getOutputBuffer().writeCharSequence("ErrorActionHandler [500] error: " + ctx.getAttributes().get("error"), Charset.forName("UTF-8"));
         ctx.getResponse().setStatus(HttpResponseStatus.BAD_REQUEST);
         ctx.outputText();
         return true;

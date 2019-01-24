@@ -21,7 +21,7 @@ import java.nio.charset.Charset;
 public class NoActionHandler extends BaseActionHandler {
 
     public boolean execute(ProcessContext ctx) {
-        ctx.getOutputBuffer().writeCharSequence("[400] uri not found: " + ctx.getUri(), Charset.forName("UTF-8"));
+        ctx.getOutputBuffer().writeCharSequence("NoActionHandler [400] uri not found: " + ctx.getUri(), Charset.forName("UTF-8"));
         ctx.getResponse().setStatus(HttpResponseStatus.BAD_REQUEST);
         ctx.outputHtml();
         return true;
