@@ -26,24 +26,10 @@ import org.iff.netty.server.handlers.BaseActionHandler;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.util.Map;
 
 /**
- * <pre>
- *     rest path = /rest/:Namespace/:ModelName/:RestUri
- *     GET    /articles                       -> articles#index
- *     GET    /articles/find/:conditions      -> articles#find
- *     GET    /articles/:id                   -> articles#show
- *     POST   /articles                       -> articles#create
- *     PUT    /articles/:id                   -> articles#update
- *     DELETE /articles/:id                   -> articles#destroy
- *     GET    /articles/ex/name/:conditions   -> articles#extra
- *     POST   /articles/ex/name               -> articles#extra
- *     PUT    /articles/ex/name/:conditions   -> articles#extra
- *     DELETE /articles/ex/name/:conditions   -> articles#extra
- * </pre>
+ * JGitActionHandler
  *
  * @author <a href="mailto:iffiff1@gmail.com">Tyler Chen</a>
  * @since Sep 24, 2016
@@ -53,15 +39,7 @@ public class JGitActionHandler extends BaseActionHandler {
 
     public static final String sanitizeUri(String uri) {
         // Decode the path.
-        try {
-            uri = URLDecoder.decode(uri, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            try {
-                uri = URLDecoder.decode(uri, "ISO-8859-1");
-            } catch (UnsupportedEncodingException e1) {
-                throw new Error();
-            }
-        }
+        uri = urlDecode(uri);//"ISO-8859-1"
         // Convert file separators.
         uri = uri.replace('/', File.separatorChar);
         // Simplistic dumb security check.
@@ -69,13 +47,11 @@ public class JGitActionHandler extends BaseActionHandler {
         if (uri.contains(File.separator + ".") || uri.contains("." + File.separator) || uri.startsWith(".") || uri.endsWith(".")) {
             return null;
         }
-
         return uri;
     }
 
     public boolean execute(ProcessContext ctx) {
         try {
-            //String[] uris = StringUtils.split(ctx.getRequestPath(), "/");
             if (HttpUtil.is100ContinueExpected(ctx.getRequest())) {
                 ctx.getCtx().channel().write(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
             }
