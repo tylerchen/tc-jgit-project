@@ -184,8 +184,8 @@ public class Main {
             WebApplication.get()
                     .getConfig()
                     .addFilterRegistrations(new NettyFilterRegistration(WebApplication.get().getContext(), GitFilter.class, "/git/*")
-                            .addInitParameter("base-path", "/Users/zhaochen/Desktop/temppath/jgit")
-                            .addInitParameter("export-all", "true"));
+                            .addInitParameter("base-path", SystemHelper.getProps().getProperty("jgit.base-path"))
+                            .addInitParameter("export-all", SystemHelper.getProps().getProperty("jgit.export-all")));
             WebApplication.get().init();
             ShutdownHookHelper.register(WebApplication.class.getName(), WebApplication.get());
         }

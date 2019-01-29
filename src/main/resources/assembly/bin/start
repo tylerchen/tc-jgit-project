@@ -63,8 +63,8 @@ done
 
 # determine server home
 SERVER_HOME=`dirname "$SCRIPT"`/..
-SERVER_NAME=datarest
-SERVER_MAIN=com.foreveross.datarest.Main
+SERVER_NAME=jgit
+SERVER_MAIN=org.iff.jgit.Main
 
 # make DATAREST_HOME absolute
 SERVER_HOME=`cd "$SERVER_HOME"; pwd`
